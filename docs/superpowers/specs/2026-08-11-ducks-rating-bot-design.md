@@ -59,8 +59,16 @@ From it we extract:
   - place: `🥇`/`🥈`/`🥉` (→ 1/2/3) or `N.` prefix
   - player name: free text, may contain spaces (`Sailor Moon`), any alphabet
   - separator: em/en dash or hyphen
-  - stars: `⭐️ <integer>` (required)
+  - stars: `⭐️ <integer>` (optional — see below)
   - spades: `| <integer> ♠️` (optional → 0 when absent)
+- **Bare participant lines:** a line that carries a valid place marker but no
+  `⭐️`/dash-number segment at all (e.g. `10. Sailormoon`) parses as a
+  participation row with 0 stars, 0 spades, rather than rejecting the post —
+  real posts routinely trail off into unscored names. A line with a place
+  marker and a dash followed by a number but no `⭐️` (e.g.
+  `8. Delureking — 124`) is still treated as malformed and rejects the whole
+  post, since that shape looks like a points line whose star marker is
+  missing, not a bare participant.
 - **All-or-nothing per post:** if any line inside the ТОП-N block fails to
   parse, the whole post is written to *Needs review* and none of its results
   enter History. Partial standings are worse than delayed ones.
@@ -112,6 +120,12 @@ Update rules:
   written only when a row is created; the script never overwrites them. The
   only column it rewrites is `player`. To fix a wrong date or number, edit
   History directly.
+- **Crash-safe writes:** History and the leaderboard tabs are written by
+  resizing the worksheet grid to the new data's exact row count and then
+  overwriting every remaining row — never by `clear()`-ing first. A crash
+  between those two steps leaves the previous contents in place instead of an
+  empty sheet, and the resize also lets the grid grow past its initial 1000
+  rows during backfill.
 
 ## Error handling summary
 

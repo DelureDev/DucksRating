@@ -88,3 +88,28 @@ def test_time_like_chatter_line_still_ignored():
     text = "ИТОГИ X\nТОП-1 игроков вечера\n🥇 A — ⭐️ 10\n19.00 — сбор завтра"
     tr = parse_post(make_post(text))
     assert len(tr.lines) == 1
+
+
+def test_bare_participant_lines_parse_as_zero_stars():
+    text = ("ИТОГИ NIGHT CUP\n"
+            "ТОП-4 игроков вечера\n"
+            "🥇 Демид — ⭐️ 500 | 5 ♠️\n"
+            "2. Vii — ⭐️ 100\n"
+            "3. Sailormoon\n"
+            "4. Mr. BB")
+    tr = parse_post(make_post(text))
+    assert [(l.place, l.raw_name, l.stars, l.spades) for l in tr.lines] == [
+        (1, "Демид", 500, 5), (2, "Vii", 100, 0),
+        (3, "Sailormoon", 0, 0), (4, "Mr. BB", 0, 0)]
+
+
+def test_dash_number_line_without_star_still_rejects():
+    text = "ИТОГИ X\n🥇 A — ⭐️ 10\n2. B — 124"
+    with pytest.raises(PostParseError):
+        parse_post(make_post(text))
+
+
+def test_backslashes_stripped_from_names():
+    text = "ИТОГИ X\n🥇 Kradushiy\\_ — ⭐️ 10\n2. A\\_Cheptsov"
+    tr = parse_post(make_post(text))
+    assert [l.raw_name for l in tr.lines] == ["Kradushiy_", "A_Cheptsov"]

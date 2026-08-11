@@ -13,7 +13,12 @@ _LINE_RE = re.compile(
     r"(?:\|\s*(?P<spades>\d+)\s*♠️?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
-_MARKER_RE = re.compile(r"^\s*(?:[\U0001F947-\U0001F949]|\d{1,3}[.)](?!\d))")
+_MARKER_RE = re.compile(
+    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])|(?P<num>\d{1,3})[.)](?!\d))"
+)
+# A dash/hyphen followed (maybe after spaces) by a digit: looks like a points
+# line whose star marker is missing, e.g. "8. Delureking — 124".
+_DASH_DIGIT_RE = re.compile(r"[—–-]\s*\d")
 _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
 
 
@@ -60,12 +65,22 @@ def parse_post(post: RawPost) -> TournamentResult:
             place = _MEDALS[m["medal"]] if m["medal"] else int(m["num"])
             lines.append(ResultLine(
                 place=place,
-                raw_name=m["name"].strip(),
+                raw_name=m["name"].strip().replace("\\", ""),
                 stars=_digits(m["stars"]),
                 spades=int(m["spades"]) if m["spades"] else 0,
             ))
-        elif _MARKER_RE.match(line):
+            continue
+        marker = _MARKER_RE.match(line)
+        if not marker:
+            continue
+        if "⭐" in line or _DASH_DIGIT_RE.search(line):
+            # malformed star line, or a points line whose star marker is missing
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
+        name = line[marker.end():].strip().replace("\\", "")
+        if not name:
+            raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
+        place = _MEDALS[marker["medal"]] if marker["medal"] else int(marker["num"])
+        lines.append(ResultLine(place=place, raw_name=name, stars=0, spades=0))
 
     if not lines:
         raise PostParseError(post.msg_id, "no result lines found")

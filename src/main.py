@@ -30,7 +30,14 @@ def run(sheet, fetch_posts=None) -> dict:
                 stars=line.stars, spades=line.spades))
 
     existing = {(r.msg_id, r.raw_name) for r in history}
-    added = [r for r in new_rows if (r.msg_id, r.raw_name) not in existing]
+    seen = set(existing)
+    added: list[HistoryRow] = []
+    for r in new_rows:
+        key = (r.msg_id, r.raw_name)
+        if key in seen:
+            continue  # already in History, or a duplicate within this batch
+        seen.add(key)
+        added.append(r)
     merged = sorted(history + added, key=lambda r: (r.msg_id, r.place))
 
     matcher = NameMatcher(aliases)

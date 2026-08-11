@@ -82,6 +82,14 @@ def test_alias_edit_retroactively_renames():
     assert players["Пиханина"] == "Pihanina"
 
 
+def test_duplicate_fetched_posts_do_not_double_count():
+    sheet = FakeSheet()
+    dup = POSTS + POSTS  # simulates a misbehaving server repeating pages
+    summary = run(sheet, make_fetcher(dup))
+    assert summary["new_rows"] == 11
+    assert len(sheet.history) == 11
+
+
 def test_typo_across_posts_auto_merges():
     typo_post = RawPost(13, DATE, "ИТОГИ NEXT CUP\n🥇 Delurking — ⭐️ 40")
     sheet = FakeSheet()

@@ -96,20 +96,21 @@ class Sheet:
                 keys.add((v[1], v[2]))
         return keys
 
+    def _write_all(self, ws, values: list[list]) -> None:
+        # resize (grow or truncate) then overwrite in place — never clear()
+        # first, so a crash mid-write can't leave the sheet empty.
+        ws.resize(rows=max(len(values), 1))
+        ws.update(values=values, range_name="A1")
+
     def write_history(self, rows: list[HistoryRow]) -> None:
-        ws = self._ws("History")
-        ws.clear()
-        ws.update(values=history_to_values(rows), range_name="A1")
+        self._write_all(self._ws("History"), history_to_values(rows))
 
     def write_leaderboards(self, overall_board, months) -> None:
-        ws = self._ws("Overall")
-        ws.clear()
-        ws.update(values=overall_to_values(overall_board), range_name="A1")
-        ws = self._ws("Monthly")
-        ws.clear()
+        self._write_all(self._ws("Overall"), overall_to_values(overall_board))
         values = monthly_to_values(months)
-        if values:
-            ws.update(values=values, range_name="A1")
+        if not values:
+            values = [[""]]
+        self._write_all(self._ws("Monthly"), values)
 
     def append_review(self, items: list[tuple[str, str]]) -> None:
         if items:

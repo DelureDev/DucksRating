@@ -56,12 +56,12 @@ def fetch_posts_until(known_ids: set[int]) -> list[RawPost]:
         if not all_ids:
             break
         fresh = [p for p in page if p.msg_id not in known_ids]
-        new_posts.extend(fresh)
         oldest = min(all_ids)
+        if before is not None and oldest >= before:
+            break  # no progress safeguard — a repeated page contributes nothing
+        new_posts.extend(fresh)
         if any(p.msg_id in known_ids for p in page):
             break  # reached already-known posts
-        if before is not None and oldest >= before:
-            break  # no progress safeguard
         before = oldest
         time.sleep(FETCH_DELAY_SECONDS)
     return sorted(new_posts, key=lambda p: p.msg_id)

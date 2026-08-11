@@ -1,7 +1,7 @@
 import datetime
 import pathlib
 
-from src import fetch
+from src import fetch, parse
 from src.models import RawPost
 from src.parse import parse_post
 
@@ -86,3 +86,13 @@ def test_live_snapshot_smoke():
     assert len(posts) >= 1          # structure still recognized
     assert all(p.msg_id > 0 for p in posts)
     assert all(p.text.strip() for p in posts)
+
+
+def test_live_snapshot_results_posts_all_parse():
+    html = (pathlib.Path(__file__).parent / "fixtures" / "live_snapshot.html"
+            ).read_text(encoding="utf-8")
+    results = [p for p in fetch.parse_page(html) if parse.is_results_post(p.text)]
+    assert len(results) >= 3
+    for post in results:
+        tr = parse.parse_post(post)   # must not raise
+        assert tr.lines
