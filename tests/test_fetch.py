@@ -65,6 +65,20 @@ def test_fetch_backfills_to_channel_start(monkeypatch):
     assert calls == ["", "?before=103", "?before=101"]
 
 
+def test_photo_only_page_does_not_stop_backfill(monkeypatch):
+    photo_page = ('<html><body><div class="tgme_widget_message" data-post="DUCKS_POKER/102">'
+                  '<time datetime="2026-08-01T00:00:00+00:00"></time></div></body></html>')
+    calls = _fake_pages(monkeypatch, {
+        "": _page(103, 104),
+        "?before=103": photo_page,
+        "?before=102": _page(101),
+        "?before=101": "<html></html>",
+    })
+    posts = fetch.fetch_posts_until(known_ids=set())
+    assert [p.msg_id for p in posts] == [101, 103, 104]
+    assert calls == ["", "?before=103", "?before=102", "?before=101"]
+
+
 def test_live_snapshot_smoke():
     html = (pathlib.Path(__file__).parent / "fixtures" / "live_snapshot.html"
             ).read_text(encoding="utf-8")

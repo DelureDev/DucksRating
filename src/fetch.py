@@ -39,18 +39,26 @@ def parse_page(html: str) -> list[RawPost]:
     return posts
 
 
+def _page_msg_ids(html: str) -> list[int]:
+    soup = BeautifulSoup(html, "html.parser")
+    return [int(d["data-post"].split("/")[-1])
+            for d in soup.select("div.tgme_widget_message[data-post]")]
+
+
 def fetch_posts_until(known_ids: set[int]) -> list[RawPost]:
     new_posts: list[RawPost] = []
     before: int | None = None
     while True:
         url = BASE_URL if before is None else f"{BASE_URL}?before={before}"
-        page = parse_page(_get(url))
-        if not page:
+        html = _get(url)
+        page = parse_page(html)
+        all_ids = _page_msg_ids(html)
+        if not all_ids:
             break
         fresh = [p for p in page if p.msg_id not in known_ids]
         new_posts.extend(fresh)
-        oldest = min(p.msg_id for p in page)
-        if len(fresh) < len(page):
+        oldest = min(all_ids)
+        if any(p.msg_id in known_ids for p in page):
             break  # reached already-known posts
         if before is not None and oldest >= before:
             break  # no progress safeguard
