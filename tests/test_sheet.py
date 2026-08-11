@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 from src.models import HistoryRow
 from src.sheet import (HISTORY_HEADER, history_to_values, values_to_history,
                        overall_to_values, monthly_to_values)
@@ -46,3 +48,17 @@ def test_monthly_to_values_sections():
     assert values[1][0] == "rank"
     assert values[2] == [1, "A", 20, 0, 1]
     assert values[3] == []
+
+
+def test_values_to_history_short_row_raises_with_row_context():
+    values = [HISTORY_HEADER, ["101", "2026-08-10", "CUP"]]
+    with pytest.raises(ValueError) as ei:
+        values_to_history(values)
+    assert "row 2" in str(ei.value)
+
+
+def test_values_to_history_bad_date_raises_with_row_context():
+    values = [["101", "not-a-date", "CUP", "1", "A", "A", "100", "2"]]
+    with pytest.raises(ValueError) as ei:
+        values_to_history(values)
+    assert "row 1" in str(ei.value)

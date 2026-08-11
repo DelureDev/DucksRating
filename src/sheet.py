@@ -25,14 +25,19 @@ def history_to_values(rows: list[HistoryRow]) -> list[list]:
 
 def values_to_history(values: list[list]) -> list[HistoryRow]:
     rows = []
-    for v in values:
+    for i, v in enumerate(values, start=1):
         v = list(v) + [""] * (8 - len(v))
         if v[0] in ("", "msg_id"):
             continue
-        rows.append(HistoryRow(
-            msg_id=int(v[0]), date=datetime.date.fromisoformat(str(v[1])),
-            tournament=str(v[2]), place=int(v[3]), raw_name=str(v[4]),
-            player=str(v[5]), stars=int(v[6] or 0), spades=int(v[7] or 0)))
+        try:
+            rows.append(HistoryRow(
+                msg_id=int(v[0]), date=datetime.date.fromisoformat(str(v[1])),
+                tournament=str(v[2]), place=int(v[3]), raw_name=str(v[4]),
+                player=str(v[5]), stars=int(v[6] or 0), spades=int(v[7] or 0)))
+        except (ValueError, TypeError) as exc:
+            raise ValueError(
+                f"History row {i} cannot be parsed: {v!r} — fix this row in the Sheet"
+            ) from exc
     return rows
 
 
