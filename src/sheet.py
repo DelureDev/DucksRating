@@ -1,0 +1,113 @@
+import datetime
+import json
+import os
+
+import gspread
+
+from .models import HistoryRow
+
+HISTORY_HEADER = ["msg_id", "date", "tournament", "place",
+                  "raw_name", "player", "stars", "spades"]
+BOARD_HEADER = ["rank", "player", "stars ⭐️", "spades ♠️", "tournaments"]
+REVIEW_HEADER = ["date added", "type", "details"]
+ALIASES_HEADER = ["written as", "real player"]
+TAB_ROWS = {"History": HISTORY_HEADER, "Overall": BOARD_HEADER,
+            "Monthly": [], "Aliases": ALIASES_HEADER,
+            "Needs review": REVIEW_HEADER}
+
+
+def history_to_values(rows: list[HistoryRow]) -> list[list]:
+    ordered = sorted(rows, key=lambda r: (-r.msg_id, r.place))
+    return [HISTORY_HEADER] + [
+        [r.msg_id, r.date.isoformat(), r.tournament, r.place,
+         r.raw_name, r.player, r.stars, r.spades] for r in ordered]
+
+
+def values_to_history(values: list[list]) -> list[HistoryRow]:
+    rows = []
+    for v in values:
+        v = list(v) + [""] * (8 - len(v))
+        if v[0] in ("", "msg_id"):
+            continue
+        rows.append(HistoryRow(
+            msg_id=int(v[0]), date=datetime.date.fromisoformat(str(v[1])),
+            tournament=str(v[2]), place=int(v[3]), raw_name=str(v[4]),
+            player=str(v[5]), stars=int(v[6] or 0), spades=int(v[7] or 0)))
+    return rows
+
+
+def overall_to_values(board: list[dict]) -> list[list]:
+    return [BOARD_HEADER] + [
+        [b["rank"], b["player"], b["stars"], b["spades"], b["tournaments"]]
+        for b in board]
+
+
+def monthly_to_values(months: list[tuple[str, list[dict]]]) -> list[list]:
+    values: list[list] = []
+    for month, board in months:
+        values.append([month])
+        values.extend(overall_to_values(board))
+        values.append([])
+    return values
+
+
+def _credentials() -> dict:
+    raw = os.environ.get("GOOGLE_CREDENTIALS")
+    if raw:
+        return json.loads(raw)
+    path = os.environ.get("GOOGLE_CREDENTIALS_FILE", "service_account.json")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+class Sheet:
+    def __init__(self):
+        gc = gspread.service_account_from_dict(_credentials())
+        self._sh = gc.open_by_key(os.environ["SHEET_ID"])
+        existing = {ws.title for ws in self._sh.worksheets()}
+        for title, header in TAB_ROWS.items():
+            if title not in existing:
+                ws = self._sh.add_worksheet(title=title, rows=1000, cols=10)
+                if header:
+                    ws.update(values=[header], range_name="A1")
+
+    def _ws(self, title: str):
+        return self._sh.worksheet(title)
+
+    def read_history(self) -> list[HistoryRow]:
+        return values_to_history(self._ws("History").get_all_values())
+
+    def read_aliases(self) -> dict[str, str]:
+        aliases = {}
+        for v in self._ws("Aliases").get_all_values():
+            if len(v) >= 2 and v[0] and v[1] and v[0] != "written as":
+                aliases[v[0]] = v[1]
+        return aliases
+
+    def read_review_keys(self) -> set[tuple[str, str]]:
+        keys = set()
+        for v in self._ws("Needs review").get_all_values():
+            if len(v) >= 3 and v[1] and v[1] != "type":
+                keys.add((v[1], v[2]))
+        return keys
+
+    def write_history(self, rows: list[HistoryRow]) -> None:
+        ws = self._ws("History")
+        ws.clear()
+        ws.update(values=history_to_values(rows), range_name="A1")
+
+    def write_leaderboards(self, overall_board, months) -> None:
+        ws = self._ws("Overall")
+        ws.clear()
+        ws.update(values=overall_to_values(overall_board), range_name="A1")
+        ws = self._ws("Monthly")
+        ws.clear()
+        values = monthly_to_values(months)
+        if values:
+            ws.update(values=values, range_name="A1")
+
+    def append_review(self, items: list[tuple[str, str]]) -> None:
+        if items:
+            today = datetime.date.today().isoformat()
+            self._ws("Needs review").append_rows(
+                [[today, t, d] for t, d in items])
