@@ -13,7 +13,7 @@ _LINE_RE = re.compile(
     r"(?:\|\s*(?P<spades>\d+)\s*♠️?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
-_MARKER_RE = re.compile(r"^\s*(?:[\U0001F947-\U0001F949]|\d{1,3}[.)]\s)")
+_MARKER_RE = re.compile(r"^\s*(?:[\U0001F947-\U0001F949]|\d{1,3}[.)](?!\d))")
 _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
 
 

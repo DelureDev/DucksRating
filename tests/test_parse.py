@@ -75,3 +75,16 @@ def test_chatter_lines_ignored():
     text = "ИТОГИ X\nТОП-1 игроков вечера\n🥇 A — ⭐️ 10\nСбор завтра в 19.00!"
     tr = parse_post(make_post(text))
     assert len(tr.lines) == 1
+
+
+def test_missing_space_after_place_marker_rejects():
+    text = "ИТОГИ MINI\n1. A — ⭐️ 10\n2. B — ⭐️ 5\n3.C — ⭐️ 1"
+    with pytest.raises(PostParseError) as ei:
+        parse_post(make_post(text))
+    assert "3.C" in ei.value.reason
+
+
+def test_time_like_chatter_line_still_ignored():
+    text = "ИТОГИ X\nТОП-1 игроков вечера\n🥇 A — ⭐️ 10\n19.00 — сбор завтра"
+    tr = parse_post(make_post(text))
+    assert len(tr.lines) == 1
