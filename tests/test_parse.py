@@ -77,11 +77,11 @@ def test_chatter_lines_ignored():
     assert len(tr.lines) == 1
 
 
-def test_missing_space_after_place_marker_rejects():
+def test_missing_space_after_place_marker_parses():
+    # real posts contain lines like "7.Илья —  ⭐️ 594" — no space after the dot
     text = "ИТОГИ MINI\n1. A — ⭐️ 10\n2. B — ⭐️ 5\n3.C — ⭐️ 1"
-    with pytest.raises(PostParseError) as ei:
-        parse_post(make_post(text))
-    assert "3.C" in ei.value.reason
+    tr = parse_post(make_post(text))
+    assert (tr.lines[2].place, tr.lines[2].raw_name, tr.lines[2].stars) == (3, "C", 1)
 
 
 def test_time_like_chatter_line_still_ignored():
@@ -122,6 +122,9 @@ def _post_with_variant_line(line, place):
     ("🥈Alamroom —  ⭐️ 1 370", 2, "Alamroom", 1370, 0),     # msg 202: no space after medal
     ("11. Stepanov stepan —  200", 11, "Stepanov stepan", 200, 0),  # msg 209: starless points
     ("11. m0nakhov —  200", 11, "m0nakhov", 200, 0),        # msg 215: same
+    ("5. Вованчик — ⭐️ 120 |", 5, "Вованчик", 120, 0),      # msg 59: dangling pipe
+    ("13. Пиханина — ⭐️ 350 |", 13, "Пиханина", 350, 0),    # msg 82: same
+    ("7.Илья —  ⭐️ 594", 7, "Илья", 594, 0),                # msg 91: no space after number
 ])
 def test_real_world_format_variants(line, place, name, stars, spades):
     tr = parse_post(_post_with_variant_line(line, place))

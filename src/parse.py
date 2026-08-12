@@ -11,10 +11,10 @@ _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 # space after a medal may be missing ("🥈Alamroom"), and the knockout segment
 # may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️").
 _LINE_RE = re.compile(
-    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)]\s+)"
+    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)](?!\d)\s*)"
     r"(?P<name>.+?)\s*[—–-]\s*"
     r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
-    r"(?:\|\s*[⭐♠♥♦♣]?️?\s*(?P<spades>\d+)\s*[⭐♠♥♦♣]?️?)?\s*$"
+    r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<spades>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
 _MARKER_RE = re.compile(
