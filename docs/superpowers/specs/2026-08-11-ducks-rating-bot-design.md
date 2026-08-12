@@ -85,6 +85,12 @@ Layered, certain → uncertain:
    `ё → е`, and map Latin/Cyrillic homoglyphs (а/a, е/e, о/o, р/p, с/c, х/x,
    у/y, к/k, м/m, т/t) to one alphabet. Exact match after normalization →
    same player.
+1a. **Transliterate** (comparison only): every name also gets an informal
+   Cyrillic→Latin romanization («Арчи» → `archi`, «Доджер» → `dodzher`);
+   the fuzzy layer below scores both the normalized and the transliterated
+   forms and keeps the higher. So «Арчи» vs `Archi` scores 100 (auto-merge)
+   and «Доджер» vs `Dodger` scores ~77 (review suggestion) — cross-alphabet
+   spellings of one nickname no longer look unrelated.
 2. **Aliases tab** (manual override): rows of `written as → real player`.
    Always wins over fuzzy logic.
 3. **Fuzzy** (rapidfuzz similarity vs all known players), for new names only:

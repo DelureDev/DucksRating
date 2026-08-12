@@ -1,4 +1,4 @@
-from src.names import normalize, NameMatcher
+from src.names import normalize, transliterate, NameMatcher
 
 
 def test_normalize_case_and_spaces():
@@ -61,3 +61,37 @@ def test_resolution_is_stable_within_run():
     m.resolve("Delureking")
     assert m.resolve("Delurking").canonical == "Delureking"
     assert m.resolve("Delurking").canonical == "Delureking"  # second time too
+
+
+def test_transliterate_basic():
+    assert transliterate("Арчи") == "archi"
+    assert transliterate("Демид") == "demid"
+    assert transliterate("Доджер") == "dodzher"
+    assert transliterate("Dodger") == "dodger"  # Latin passes through
+
+
+def test_cyrillic_latin_same_nickname_auto_merges():
+    # «Арчи» transliterates exactly to "archi" -> same player, no human needed
+    m = NameMatcher(aliases={})
+    m.resolve("Archi")
+    r = m.resolve("Арчи")
+    assert r.kind == "auto_merged"
+    assert r.canonical == "Archi"
+    assert r.score >= 90
+
+
+def test_cyrillic_latin_close_nickname_suggests_review():
+    # "dodzher" vs "dodger" is close but not exact -> review suggestion
+    m = NameMatcher(aliases={})
+    m.resolve("Dodger")
+    r = m.resolve("Доджер")
+    assert r.kind == "new_review"
+    assert r.similar_to == "Dodger"
+    assert 70 <= r.score < 90
+
+
+def test_cyrillic_latin_unrelated_names_stay_separate():
+    m = NameMatcher(aliases={})
+    m.resolve("Demid")
+    r = m.resolve("Гавр")
+    assert r.kind == "new"
