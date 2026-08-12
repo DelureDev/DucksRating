@@ -12,7 +12,7 @@ _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 # may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️").
 _LINE_RE = re.compile(
     r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)](?!\d)\s*)"
-    r"(?P<name>.+?)\s*[—–-]\s*"
+    r"(?P<name>.+?)(?:\s+[—–-]|[—–])\s*"
     r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
     r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<knockouts>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
 )
@@ -20,12 +20,13 @@ _LINE_RE = re.compile(
 _MARKER_RE = re.compile(
     r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])|(?P<num>\d{1,3})[.)](?!\d))"
 )
-# A dash/hyphen followed (maybe after spaces) by a digit. Well-formed
-# dash-number lines parse via _LINE_RE (stars without the ⭐ emoji); if one
-# still reaches the bare-line branch it is malformed ("5. X — ⭐️" with no
-# number, garbled tail, etc.) and must reject the post rather than pass as a
-# 0-star participant.
-_DASH_DIGIT_RE = re.compile(r"[—–-]\s*\d")
+# A points-like dash followed (maybe after spaces) by a digit. Em/en dashes
+# always count; a plain hyphen only when preceded by whitespace, so glued
+# hyphens stay part of names ("Anna-2"). Well-formed dash-number lines parse
+# via _LINE_RE; one that still reaches the bare-line branch is malformed
+# ("2. Xx — 100 zz") and must reject the post rather than pass as a 0-star
+# participant.
+_DASH_DIGIT_RE = re.compile(r"(?:[—–]|\s-)\s*\d")
 _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
 
 

@@ -12,6 +12,7 @@ class FakeSheet:
         self.history = []
         self.aliases = aliases or {}
         self.review_rows = []
+        self.automerged = []
         self.overall = None
         self.months = None
 
@@ -24,6 +25,9 @@ class FakeSheet:
     def read_review_keys(self):
         return {(t, d) for t, d in self.review_rows}
 
+    def read_automerged_keys(self):
+        return set(self.automerged)
+
     def write_history(self, rows):
         self.history = list(rows)
 
@@ -33,6 +37,9 @@ class FakeSheet:
 
     def append_review(self, items):
         self.review_rows.extend(items)
+
+    def append_automerged(self, items):
+        self.automerged.extend(items)
 
 
 BROKEN = "ИТОГИ BROKEN CUP\n🥇 Кто-то — ⭐️"  # star but no number
@@ -96,4 +103,30 @@ def test_typo_across_posts_auto_merges():
     run(sheet, make_fetcher(POSTS + [typo_post]))
     typo_rows = [r for r in sheet.history if r.raw_name == "Delurking"]
     assert typo_rows[0].player == "Delureking"
-    assert any(t == "auto_merged" for t, _ in sheet.review_rows)
+    # audit notes go to their own tab, never to the actionable review list
+    assert any("Delurking" in d for d in sheet.automerged)
+    assert not any(t == "auto_merged" for t, _ in sheet.review_rows)
+
+
+def test_automerged_notes_deduped_across_runs():
+    typo_post = RawPost(13, DATE, "ИТОГИ NEXT CUP\n🥇 Delurking — ⭐️ 40")
+    sheet = FakeSheet()
+    run(sheet, make_fetcher(POSTS + [typo_post]))
+    run(sheet, make_fetcher(POSTS + [typo_post]))
+    assert len(sheet.automerged) == 1
+
+
+def test_full_fetch_walks_everything_but_respects_known(monkeypatch):
+    from src import fetch, main
+
+    calls = []
+
+    def fake_walk(known_ids):
+        calls.append(set(known_ids))
+        return [RawPost(10, DATE, "a"), RawPost(11, DATE, "b"),
+                RawPost(12, DATE, "c")]
+
+    monkeypatch.setattr(fetch, "fetch_posts_until", fake_walk)
+    posts = main.full_fetch({11})
+    assert calls == [set()]                      # walked the whole channel
+    assert [p.msg_id for p in posts] == [10, 12]  # known post filtered out

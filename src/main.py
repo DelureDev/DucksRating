@@ -6,11 +6,23 @@ from .models import HistoryRow
 from .names import NameMatcher
 
 
+def full_fetch(known_ids: set[int]) -> list:
+    """Walk the entire channel, returning posts missing from History.
+
+    The normal incremental fetch stops at the first already-known post, so it
+    never revisits older ones. This walk lets quarantined posts re-enter after
+    a parser fix or an admin edit; dedup in run() keeps it safe.
+    """
+    return [p for p in fetch.fetch_posts_until(set())
+            if p.msg_id not in known_ids]
+
+
 def run(sheet, fetch_posts=None) -> dict:
     fetch_posts = fetch_posts or fetch.fetch_posts_until
     history = sheet.read_history()
     aliases = sheet.read_aliases()
     seen_review = sheet.read_review_keys()
+    seen_automerged = sheet.read_automerged_keys()
 
     posts = fetch_posts({r.msg_id for r in history})
     review: list[tuple[str, str]] = []
@@ -42,12 +54,12 @@ def run(sheet, fetch_posts=None) -> dict:
 
     matcher = NameMatcher(aliases)
     canonical_rows: list[HistoryRow] = []
+    automerged: list[str] = []
     for r in merged:
         res = matcher.resolve(r.raw_name)
         if res.kind == "auto_merged":
-            review.append(("auto_merged",
-                           f"«{r.raw_name}» → «{res.canonical}» "
-                           f"(score {res.score:.0f})"))
+            automerged.append(f"«{r.raw_name}» → «{res.canonical}» "
+                              f"(score {res.score:.0f})")
         elif res.kind == "new_review":
             review.append(("possible_match",
                            f"«{r.raw_name}» looks similar to «{res.similar_to}» "
@@ -63,19 +75,27 @@ def run(sheet, fetch_posts=None) -> dict:
         if item not in seen_review and item not in fresh_review:
             fresh_review.append(item)
     sheet.append_review(fresh_review)
+    fresh_automerged = []
+    for note in automerged:
+        if note not in seen_automerged and note not in fresh_automerged:
+            fresh_automerged.append(note)
+    sheet.append_automerged(fresh_automerged)
 
     return {"fetched_posts": len(posts), "new_rows": len(added),
-            "review_items": len(fresh_review)}
+            "review_items": len(fresh_review),
+            "auto_merged": len(fresh_automerged)}
 
 
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     from .sheet import Sheet
-    summary = run(Sheet())
+    fetcher = full_fetch if "--full" in sys.argv[1:] else None
+    summary = run(Sheet(), fetch_posts=fetcher)
     print(f"posts fetched: {summary['fetched_posts']}, "
           f"history rows added: {summary['new_rows']}, "
-          f"new review items: {summary['review_items']}")
+          f"new review items: {summary['review_items']}, "
+          f"auto-merge notes: {summary['auto_merged']}")
 
 
 if __name__ == "__main__":

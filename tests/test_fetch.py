@@ -18,6 +18,15 @@ def test_parse_page_extracts_posts():
     assert lines[1] == "ТОП-2 игроков вечера"
 
 
+def test_dates_are_moscow_time():
+    # 22:30 UTC is already 01:30 next day in Moscow — the club's clock wins
+    html = ('<div class="tgme_widget_message" data-post="DUCKS_POKER/500">'
+            '<div class="tgme_widget_message_text">поздний пост</div>'
+            '<time datetime="2026-08-10T22:30:00+00:00"></time></div>')
+    posts = fetch.parse_page(html)
+    assert posts[0].date == datetime.date(2026, 8, 11)
+
+
 def test_parse_page_output_feeds_parser():
     posts = fetch.parse_page(FIXTURE)
     tr = parse_post(posts[0])

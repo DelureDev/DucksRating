@@ -137,3 +137,23 @@ def test_backslashes_stripped_from_names():
     text = "ИТОГИ X\n🥇 Kradushiy\\_ — ⭐️ 10\n2. A\\_Cheptsov"
     tr = parse_post(make_post(text))
     assert [l.raw_name for l in tr.lines] == ["Kradushiy_", "A_Cheptsov"]
+
+
+def test_hyphen_digit_name_is_bare_participant():
+    # "Anna-2" is a name, not "Anna scored 2": glued hyphens belong to names
+    text = "ИТОГИ X\n🥇 A — ⭐️ 10\n2. Anna-2"
+    tr = parse_post(make_post(text))
+    assert (tr.lines[1].place, tr.lines[1].raw_name,
+            tr.lines[1].stars) == (2, "Anna-2", 0)
+
+
+def test_hyphen_digit_name_with_points_segment():
+    text = "ИТОГИ X\n🥇 Anna-2 — ⭐️ 100"
+    tr = parse_post(make_post(text))
+    assert (tr.lines[0].raw_name, tr.lines[0].stars) == ("Anna-2", 100)
+
+
+def test_malformed_dash_line_still_rejects():
+    text = "ИТОГИ X\n🥇 A — ⭐️ 10\n2. Xx — 100 zz"
+    with pytest.raises(PostParseError):
+        parse_post(make_post(text))

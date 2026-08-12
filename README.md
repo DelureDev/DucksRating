@@ -67,4 +67,6 @@ Sometimes the same player's name is typed slightly differently between posts. Us
 
 - Add a row with the name as it was written, and the real player's name next to it.
 - This takes effect on the next run, and it fixes the player's history retroactively — you don't need to touch old rows.
-- The **Needs review** tab lists anything the bot wants a human to double-check, such as posts it couldn't parse or names it merged automatically.
+- The **Needs review** tab lists only things that need a human decision: posts the bot couldn't parse, and name pairs that look similar but weren't merged.
+- The **Auto-merged** tab is an audit log of merges the bot made on its own — nothing to do there unless a merge looks wrong (then add an Aliases row mapping that spelling to itself to split it back).
+- Once a month (and whenever you tick "Full re-scan" on a manual run) the bot re-reads the entire channel and picks up any posts that were skipped earlier — for example, ones it previously couldn't parse.

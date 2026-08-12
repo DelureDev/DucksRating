@@ -43,6 +43,11 @@ t.me/s/DUCKS_POKER ──fetch──▶ raw posts ──parse──▶ results �
 - **Daily run:** read newest pages backward until hitting a message ID already
   present in History.
 - **Backfill (first run):** paginate to the oldest post.
+- **Full re-scan** (`python -m src.main --full`, also a monthly cron and a
+  checkbox on the manual workflow trigger): walk the whole channel and add
+  any rows missing from History — heals posts that were quarantined and
+  later fixed (parser update or admin edit), which the incremental fetch
+  never revisits.
 - Polite 1–2 s delay between page requests.
 - Any HTTP error or unrecognized page structure → exit non-zero, write nothing
   (GitHub Actions shows ❌). Never write partial/guessed data.
@@ -53,8 +58,9 @@ A post is a results post if its text starts with «ИТОГИ» (case-insensitiv
 From it we extract:
 
 - **Tournament name:** first line, the text after «ИТОГИ» (e.g. `SPY 007 TOURNAMENT`).
-- **Tournament date:** calendar date of the Telegram post (explicit decision;
-  editable later — see Write stage).
+- **Tournament date:** calendar date of the Telegram post in the club's
+  timezone (UTC+3, `CLUB_UTC_OFFSET_HOURS`); editable later — see Write
+  stage.
 - **Result lines**, matching:
   - place: `🥇`/`🥈`/`🥉` (→ 1/2/3) or `N.` prefix
   - player name: free text, may contain spaces (`Sailor Moon`), any alphabet
@@ -117,7 +123,8 @@ Tabs:
 | **Overall** | `rank, player, total ⭐️, total ♠️, tournaments played`, sorted by stars |
 | **Monthly** | same columns, grouped by calendar month of `date`, current month on top |
 | **Aliases** | manual `written as → real player` table |
-| **Needs review** | unparseable posts, 70–89 fuzzy suggestions, auto-merge audit rows |
+| **Needs review** | actionable items only: unparseable posts and 70–89 fuzzy suggestions |
+| **Auto-merged** | audit log of automatic merges (informational, no action needed) |
 
 Update rules:
 

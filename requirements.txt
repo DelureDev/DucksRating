@@ -1,5 +1,5 @@
-requests>=2.31
-beautifulsoup4>=4.12
-gspread>=6.0
-rapidfuzz>=3.6
-pytest>=8.0
+requests~=2.33
+beautifulsoup4~=4.15
+gspread~=6.2
+rapidfuzz~=3.14
+pytest~=9.0

@@ -10,10 +10,12 @@ HISTORY_HEADER = ["msg_id", "date", "tournament", "place",
                   "raw_name", "player", "stars", "knockouts"]
 BOARD_HEADER = ["rank", "player", "stars ⭐️", "knockouts ♠️", "tournaments"]
 REVIEW_HEADER = ["date added", "type", "details"]
+AUTOMERGED_HEADER = ["date added", "details"]
 ALIASES_HEADER = ["written as", "real player"]
 TAB_ROWS = {"History": HISTORY_HEADER, "Overall": BOARD_HEADER,
             "Monthly": [], "Aliases": ALIASES_HEADER,
-            "Needs review": REVIEW_HEADER}
+            "Needs review": REVIEW_HEADER,
+            "Auto-merged": AUTOMERGED_HEADER}
 
 
 def history_to_values(rows: list[HistoryRow]) -> list[list]:
@@ -117,3 +119,15 @@ class Sheet:
             today = datetime.date.today().isoformat()
             self._ws("Needs review").append_rows(
                 [[today, t, d] for t, d in items])
+
+    def read_automerged_keys(self) -> set[str]:
+        keys = set()
+        for v in self._ws("Auto-merged").get_all_values():
+            if len(v) >= 2 and v[1] and v[1] != "details":
+                keys.add(v[1])
+        return keys
+
+    def append_automerged(self, items: list[str]) -> None:
+        if items:
+            today = datetime.date.today().isoformat()
+            self._ws("Auto-merged").append_rows([[today, d] for d in items])

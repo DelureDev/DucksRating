@@ -4,10 +4,11 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-from .config import CHANNEL, FETCH_DELAY_SECONDS, USER_AGENT
+from .config import CHANNEL, CLUB_UTC_OFFSET_HOURS, FETCH_DELAY_SECONDS, USER_AGENT
 from .models import RawPost
 
 BASE_URL = f"https://t.me/s/{CHANNEL}"
+_CLUB_TZ = datetime.timezone(datetime.timedelta(hours=CLUB_UTC_OFFSET_HOURS))
 
 
 class FetchError(Exception):
@@ -33,7 +34,8 @@ def parse_page(html: str) -> list[RawPost]:
             br.replace_with("\n")
         posts.append(RawPost(
             msg_id=int(msg["data-post"].split("/")[-1]),
-            date=datetime.datetime.fromisoformat(time_el["datetime"]).date(),
+            date=datetime.datetime.fromisoformat(
+                time_el["datetime"]).astimezone(_CLUB_TZ).date(),
             text=text_div.get_text(),
         ))
     return posts
