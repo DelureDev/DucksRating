@@ -46,7 +46,7 @@ def test_parse_format_variants():
 
 
 def test_broken_result_line_rejects_whole_post():
-    text = SPY_007.replace("8. Delureking — ⭐️ 124", "8. Delureking — 124")  # star missing
+    text = SPY_007.replace("8. Delureking — ⭐️ 124", "8. Delureking — ⭐️")  # number missing
     with pytest.raises(PostParseError) as ei:
         parse_post(make_post(text, msg_id=7))
     assert ei.value.msg_id == 7
@@ -103,10 +103,31 @@ def test_bare_participant_lines_parse_as_zero_stars():
         (3, "Sailormoon", 0, 0), (4, "Mr. BB", 0, 0)]
 
 
-def test_dash_number_line_without_star_still_rejects():
+def test_dash_number_line_without_star_parses_as_stars():
     text = "ИТОГИ X\n🥇 A — ⭐️ 10\n2. B — 124"
-    with pytest.raises(PostParseError):
-        parse_post(make_post(text))
+    tr = parse_post(make_post(text))
+    assert (tr.lines[1].raw_name, tr.lines[1].stars) == ("B", 124)
+
+
+def _post_with_variant_line(line, place):
+    filler = [f"{i}. Filler{i} — ⭐️ 10" for i in range(1, place)]
+    return make_post("ИТОГИ VARIANT CUP\n" + "\n".join(filler + [line]))
+
+
+@pytest.mark.parametrize("line,place,name,stars,spades", [
+    ("🥇 Ден — ⭐️ 500 | ⭐️ 7", 1, "Ден", 500, 7),          # msg 59: star emoji in spades slot
+    ("🥇 Ула — ⭐️ 4470 | ⭐️ 12", 1, "Ула", 4470, 12),      # msg 82: same
+    ("4. ОляЛя — 1 104 очка", 4, "ОляЛя", 1104, 0),         # msg 91: no star, trailing word
+    ("🥈 StBard — ⭐️ 380|3 ♥️", 2, "StBard", 380, 3),       # msg 158: no spaces, heart emoji
+    ("🥈Alamroom —  ⭐️ 1 370", 2, "Alamroom", 1370, 0),     # msg 202: no space after medal
+    ("11. Stepanov stepan —  200", 11, "Stepanov stepan", 200, 0),  # msg 209: starless points
+    ("11. m0nakhov —  200", 11, "m0nakhov", 200, 0),        # msg 215: same
+])
+def test_real_world_format_variants(line, place, name, stars, spades):
+    tr = parse_post(_post_with_variant_line(line, place))
+    last = tr.lines[-1]
+    assert (last.place, last.raw_name, last.stars, last.spades) == (
+        place, name, stars, spades)
 
 
 def test_backslashes_stripped_from_names():

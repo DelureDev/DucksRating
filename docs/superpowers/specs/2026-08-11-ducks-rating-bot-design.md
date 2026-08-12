@@ -64,11 +64,15 @@ From it we extract:
 - **Bare participant lines:** a line that carries a valid place marker but no
   `⭐️`/dash-number segment at all (e.g. `10. Sailormoon`) parses as a
   participation row with 0 stars, 0 spades, rather than rejecting the post —
-  real posts routinely trail off into unscored names. A line with a place
-  marker and a dash followed by a number but no `⭐️` (e.g.
-  `8. Delureking — 124`) is still treated as malformed and rejects the whole
-  post, since that shape looks like a points line whose star marker is
-  missing, not a bare participant.
+  real posts routinely trail off into unscored names.
+- **Real-world tolerances** (each learned from an actual quarantined post):
+  the ⭐️ before the number may be absent (`11. m0nakhov —  200` → 200
+  stars), a trailing word may follow the number (`1 104 очка` → 1104), the
+  space after a medal may be missing (`🥈Alamroom`), and the knockout
+  segment may use the wrong emoji or no spaces (`| ⭐️ 7`, `380|3 ♥️` →
+  spades 7 / 3). A marker line with a dash segment that still fails this
+  grammar (e.g. `8. Delureking — ⭐️` with no number) rejects the whole
+  post as before.
 - **All-or-nothing per post:** if any line inside the ТОП-N block fails to
   parse, the whole post is written to *Needs review* and none of its results
   enter History. Partial standings are worse than delayed ones.

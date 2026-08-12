@@ -5,19 +5,26 @@ from .models import RawPost, ResultLine, TournamentResult
 RESULTS_MARKER = "ИТОГИ"
 _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 
-# Full result line: place marker, name, dash, stars, optional "| N ♠"
+# Full result line: place marker, name, dash, stars, optional "| N ♠".
+# Tolerances learned from real posts: the ⭐ before the number may be absent
+# ("11. m0nakhov —  200"), a trailing word may follow it ("1 104 очка"), the
+# space after a medal may be missing ("🥈Alamroom"), and the knockout segment
+# may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️").
 _LINE_RE = re.compile(
-    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])|(?P<num>\d{1,3})[.)])\s+"
+    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)]\s+)"
     r"(?P<name>.+?)\s*[—–-]\s*"
-    r"⭐️?\s*(?P<stars>\d[\d\s.,]*?)\s*"
-    r"(?:\|\s*(?P<spades>\d+)\s*♠️?)?\s*$"
+    r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
+    r"(?:\|\s*[⭐♠♥♦♣]?️?\s*(?P<spades>\d+)\s*[⭐♠♥♦♣]?️?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
 _MARKER_RE = re.compile(
     r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])|(?P<num>\d{1,3})[.)](?!\d))"
 )
-# A dash/hyphen followed (maybe after spaces) by a digit: looks like a points
-# line whose star marker is missing, e.g. "8. Delureking — 124".
+# A dash/hyphen followed (maybe after spaces) by a digit. Well-formed
+# dash-number lines parse via _LINE_RE (stars without the ⭐ emoji); if one
+# still reaches the bare-line branch it is malformed ("5. X — ⭐️" with no
+# number, garbled tail, etc.) and must reject the post rather than pass as a
+# 0-star participant.
 _DASH_DIGIT_RE = re.compile(r"[—–-]\s*\d")
 _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
 

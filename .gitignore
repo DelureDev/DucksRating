@@ -2,5 +2,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-service_account.json
 .env
+
+# Credential keys: the canonical name and any JSON dropped in the repo root
+# (Google key downloads look like ducks-rating-<hex>.json)
+service_account.json
+/*.json

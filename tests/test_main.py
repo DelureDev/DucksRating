@@ -35,7 +35,7 @@ class FakeSheet:
         self.review_rows.extend(items)
 
 
-BROKEN = "ИТОГИ BROKEN CUP\n🥇 Кто-то — 500"  # no star emoji
+BROKEN = "ИТОГИ BROKEN CUP\n🥇 Кто-то — ⭐️"  # star but no number
 
 
 def make_fetcher(posts):
@@ -59,7 +59,7 @@ def test_run_writes_history_and_boards():
     assert all(r.player for r in sheet.history)          # canonical filled
     assert sheet.overall[0]["player"] == "Демид"         # 2080 stars tops
     assert sheet.months[0][0] == "2026-08"
-    assert ("unparsed_post", "msg 12: unparseable result line: '🥇 Кто-то — 500'"
+    assert ("unparsed_post", "msg 12: unparseable result line: '🥇 Кто-то — ⭐️'"
             ) in sheet.review_rows
 
 
