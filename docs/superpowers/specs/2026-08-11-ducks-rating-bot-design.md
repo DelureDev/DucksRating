@@ -14,7 +14,7 @@ Sheet — automatically, every day.
 
 - **Source:** public channel `t.me/DUCKS_POKER`, posts starting with «ИТОГИ».
 - **Points:** the ⭐️ star number in each results line IS the rating points for
-  that tournament. ♠️ spades are tracked as a secondary stat (no formula).
+  that tournament. ♠️ knockouts are tracked as a secondary stat (no formula).
 - **Output:** Google Sheets — full history plus Monthly and Overall leaderboards.
 - **Schedule:** GitHub Actions, daily cron; manual run also possible.
 - **Backfill:** entire channel history on first run.
@@ -60,17 +60,17 @@ From it we extract:
   - player name: free text, may contain spaces (`Sailor Moon`), any alphabet
   - separator: em/en dash or hyphen
   - stars: `⭐️ <integer>` (optional — see below)
-  - spades: `| <integer> ♠️` (optional → 0 when absent)
+  - knockouts: `| <integer> ♠️` (optional → 0 when absent)
 - **Bare participant lines:** a line that carries a valid place marker but no
   `⭐️`/dash-number segment at all (e.g. `10. Sailormoon`) parses as a
-  participation row with 0 stars, 0 spades, rather than rejecting the post —
+  participation row with 0 stars, 0 knockouts, rather than rejecting the post —
   real posts routinely trail off into unscored names.
 - **Real-world tolerances** (each learned from an actual quarantined post):
   the ⭐️ before the number may be absent (`11. m0nakhov —  200` → 200
   stars), a trailing word may follow the number (`1 104 очка` → 1104), the
   space after a medal may be missing (`🥈Alamroom`), and the knockout
   segment may use the wrong emoji or no spaces (`| ⭐️ 7`, `380|3 ♥️` →
-  spades 7 / 3). A marker line with a dash segment that still fails this
+  knockouts 7 / 3). A marker line with a dash segment that still fails this
   grammar (e.g. `8. Delureking — ⭐️` with no number) rejects the whole
   post as before.
 - **All-or-nothing per post:** if any line inside the ТОП-N block fails to
@@ -107,7 +107,7 @@ Tabs:
 
 | Tab | Content |
 |---|---|
-| **History** | one row per player per tournament: `msg_id, date, tournament, place, raw_name, player, stars, spades`; newest first |
+| **History** | one row per player per tournament: `msg_id, date, tournament, place, raw_name, player, stars, knockouts`; newest first |
 | **Overall** | `rank, player, total ⭐️, total ♠️, tournaments played`, sorted by stars |
 | **Monthly** | same columns, grouped by calendar month of `date`, current month on top |
 | **Aliases** | manual `written as → real player` table |
@@ -120,7 +120,7 @@ Update rules:
 - **Recompute:** every run re-derives the `player` (canonical) column of ALL
   History rows from `raw_name` + current Aliases, then rebuilds Overall and
   Monthly from History. So editing Aliases retroactively fixes everything.
-- **Manual edits persist:** `date`, `tournament`, `stars`, `spades` etc. are
+- **Manual edits persist:** `date`, `tournament`, `stars`, `knockouts` etc. are
   written only when a row is created; the script never overwrites them. The
   only column it rewrites is `player`. To fix a wrong date or number, edit
   History directly.
@@ -161,7 +161,7 @@ Update rules:
 
 - `pytest`, no network: fixtures are saved HTML snapshots of real channel
   pages and real post texts (including SPY 007 from 2026-08-10).
-- Parser: medal vs numbered places, missing spades, names with spaces,
+- Parser: medal vs numbered places, missing knockouts, names with spaces,
   dash variants, non-results posts ignored, broken line → whole post rejected.
 - Names: `Delureking/DelureKing` (case), `Delurking` (≥90 merge), 70–89 →
   review row, homoglyph pairs, alias override.
@@ -171,6 +171,6 @@ Update rules:
 ## Out of scope (YAGNI)
 
 - Posting leaderboards back into Telegram.
-- Any stars+spades combined formula.
+- Any stars+knockouts combined formula.
 - Web UI beyond the Google Sheet.
 - Handling private-channel access (channel is public).

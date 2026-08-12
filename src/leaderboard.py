@@ -7,12 +7,12 @@ def _aggregate(rows: list[HistoryRow]) -> list[dict]:
     agg: dict[str, dict] = {}
     for r in rows:
         a = agg.setdefault(r.player, {"player": r.player, "stars": 0,
-                                      "spades": 0, "tournaments": 0})
+                                      "knockouts": 0, "tournaments": 0})
         a["stars"] += r.stars
-        a["spades"] += r.spades
+        a["knockouts"] += r.knockouts
         a["tournaments"] += 1
     ordered = sorted(agg.values(),
-                     key=lambda a: (-a["stars"], -a["spades"], a["player"].lower()))
+                     key=lambda a: (-a["stars"], -a["knockouts"], a["player"].lower()))
     ranked, prev_stars, prev_rank = [], None, 0
     for i, a in enumerate(ordered, start=1):
         rank = prev_rank if a["stars"] == prev_stars else i

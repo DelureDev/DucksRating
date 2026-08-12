@@ -7,8 +7,8 @@ import gspread
 from .models import HistoryRow
 
 HISTORY_HEADER = ["msg_id", "date", "tournament", "place",
-                  "raw_name", "player", "stars", "spades"]
-BOARD_HEADER = ["rank", "player", "stars ⭐️", "spades ♠️", "tournaments"]
+                  "raw_name", "player", "stars", "knockouts"]
+BOARD_HEADER = ["rank", "player", "stars ⭐️", "knockouts ♠️", "tournaments"]
 REVIEW_HEADER = ["date added", "type", "details"]
 ALIASES_HEADER = ["written as", "real player"]
 TAB_ROWS = {"History": HISTORY_HEADER, "Overall": BOARD_HEADER,
@@ -20,7 +20,7 @@ def history_to_values(rows: list[HistoryRow]) -> list[list]:
     ordered = sorted(rows, key=lambda r: (-r.msg_id, r.place))
     return [HISTORY_HEADER] + [
         [r.msg_id, r.date.isoformat(), r.tournament, r.place,
-         r.raw_name, r.player, r.stars, r.spades] for r in ordered]
+         r.raw_name, r.player, r.stars, r.knockouts] for r in ordered]
 
 
 def values_to_history(values: list[list]) -> list[HistoryRow]:
@@ -33,7 +33,7 @@ def values_to_history(values: list[list]) -> list[HistoryRow]:
             rows.append(HistoryRow(
                 msg_id=int(v[0]), date=datetime.date.fromisoformat(str(v[1])),
                 tournament=str(v[2]), place=int(v[3]), raw_name=str(v[4]),
-                player=str(v[5]), stars=int(v[6] or 0), spades=int(v[7] or 0)))
+                player=str(v[5]), stars=int(v[6] or 0), knockouts=int(v[7] or 0)))
         except (ValueError, TypeError) as exc:
             raise ValueError(
                 f"History row {i} cannot be parsed: {v!r} — fix this row in the Sheet"
@@ -43,7 +43,7 @@ def values_to_history(values: list[list]) -> list[HistoryRow]:
 
 def overall_to_values(board: list[dict]) -> list[list]:
     return [BOARD_HEADER] + [
-        [b["rank"], b["player"], b["stars"], b["spades"], b["tournaments"]]
+        [b["rank"], b["player"], b["stars"], b["knockouts"], b["tournaments"]]
         for b in board]
 
 

@@ -14,7 +14,7 @@ _LINE_RE = re.compile(
     r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)](?!\d)\s*)"
     r"(?P<name>.+?)\s*[—–-]\s*"
     r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
-    r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<spades>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
+    r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<knockouts>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
 _MARKER_RE = re.compile(
@@ -74,7 +74,7 @@ def parse_post(post: RawPost) -> TournamentResult:
                 place=place,
                 raw_name=m["name"].strip().replace("\\", ""),
                 stars=_digits(m["stars"]),
-                spades=int(m["spades"]) if m["spades"] else 0,
+                knockouts=int(m["knockouts"]) if m["knockouts"] else 0,
             ))
             continue
         marker = _MARKER_RE.match(line)
@@ -87,7 +87,7 @@ def parse_post(post: RawPost) -> TournamentResult:
         if not name:
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
         place = _MEDALS[marker["medal"]] if marker["medal"] else int(marker["num"])
-        lines.append(ResultLine(place=place, raw_name=name, stars=0, spades=0))
+        lines.append(ResultLine(place=place, raw_name=name, stars=0, knockouts=0))
 
     if not lines:
         raise PostParseError(post.msg_id, "no result lines found")

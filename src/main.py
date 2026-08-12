@@ -27,7 +27,7 @@ def run(sheet, fetch_posts=None) -> dict:
             new_rows.append(HistoryRow(
                 msg_id=tr.msg_id, date=tr.date, tournament=tr.tournament,
                 place=line.place, raw_name=line.raw_name, player="",
-                stars=line.stars, spades=line.spades))
+                stars=line.stars, knockouts=line.knockouts))
 
     existing = {(r.msg_id, r.raw_name) for r in history}
     seen = set(existing)

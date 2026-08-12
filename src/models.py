@@ -14,7 +14,7 @@ class ResultLine:
     place: int
     raw_name: str
     stars: int
-    spades: int
+    knockouts: int
 
 
 @dataclass(frozen=True)
@@ -34,4 +34,4 @@ class HistoryRow:
     raw_name: str
     player: str
     stars: int
-    spades: int
+    knockouts: int

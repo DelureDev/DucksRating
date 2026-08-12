@@ -10,7 +10,7 @@ from src.sheet import (HISTORY_HEADER, history_to_values, values_to_history,
 def row(msg_id, place=1, player="A"):
     return HistoryRow(msg_id=msg_id, date=datetime.date(2026, 8, 10),
                       tournament="CUP", place=place, raw_name=player,
-                      player=player, stars=100, spades=2)
+                      player=player, stars=100, knockouts=2)
 
 
 def test_history_roundtrip():
@@ -34,15 +34,15 @@ def test_values_to_history_skips_blank_and_header():
 
 
 def test_overall_to_values():
-    board = [{"rank": 1, "player": "B", "stars": 300, "spades": 1, "tournaments": 1}]
+    board = [{"rank": 1, "player": "B", "stars": 300, "knockouts": 1, "tournaments": 1}]
     values = overall_to_values(board)
-    assert values == [["rank", "player", "stars ⭐️", "spades ♠️", "tournaments"],
+    assert values == [["rank", "player", "stars ⭐️", "knockouts ♠️", "tournaments"],
                       [1, "B", 300, 1, 1]]
 
 
 def test_monthly_to_values_sections():
     months = [("2026-08", [{"rank": 1, "player": "A", "stars": 20,
-                            "spades": 0, "tournaments": 1}])]
+                            "knockouts": 0, "tournaments": 1}])]
     values = monthly_to_values(months)
     assert values[0] == ["2026-08"]
     assert values[1][0] == "rank"

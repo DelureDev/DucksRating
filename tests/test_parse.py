@@ -27,11 +27,11 @@ def test_parse_spy007_full():
     assert tr.tournament == "SPY 007 TOURNAMENT"
     assert len(tr.lines) == 11
     first = tr.lines[0]
-    assert (first.place, first.raw_name, first.stars, first.spades) == (1, "Демид", 2080, 23)
+    assert (first.place, first.raw_name, first.stars, first.knockouts) == (1, "Демид", 2080, 23)
     vii = tr.lines[4]
-    assert (vii.place, vii.raw_name, vii.stars, vii.spades) == (5, "Vii", 248, 0)
+    assert (vii.place, vii.raw_name, vii.stars, vii.knockouts) == (5, "Vii", 248, 0)
     last = tr.lines[10]
-    assert (last.place, last.raw_name, last.stars, last.spades) == (11, "Sailor Moon", 300, 6)
+    assert (last.place, last.raw_name, last.stars, last.knockouts) == (11, "Sailor Moon", 300, 6)
 
 
 def test_parse_format_variants():
@@ -41,7 +41,7 @@ def test_parse_format_variants():
             "2) Vii - ⭐ 50\n"                    # paren place, plain hyphen, no VS16 star
             "3. Sailor Moon – ⭐️ 25")            # en dash
     tr = parse_post(make_post(text))
-    assert [(l.place, l.raw_name, l.stars, l.spades) for l in tr.lines] == [
+    assert [(l.place, l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
         (1, "Ali-Baba", 1000, 2), (2, "Vii", 50, 0), (3, "Sailor Moon", 25, 0)]
 
 
@@ -98,7 +98,7 @@ def test_bare_participant_lines_parse_as_zero_stars():
             "3. Sailormoon\n"
             "4. Mr. BB")
     tr = parse_post(make_post(text))
-    assert [(l.place, l.raw_name, l.stars, l.spades) for l in tr.lines] == [
+    assert [(l.place, l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
         (1, "Демид", 500, 5), (2, "Vii", 100, 0),
         (3, "Sailormoon", 0, 0), (4, "Mr. BB", 0, 0)]
 
@@ -114,8 +114,8 @@ def _post_with_variant_line(line, place):
     return make_post("ИТОГИ VARIANT CUP\n" + "\n".join(filler + [line]))
 
 
-@pytest.mark.parametrize("line,place,name,stars,spades", [
-    ("🥇 Ден — ⭐️ 500 | ⭐️ 7", 1, "Ден", 500, 7),          # msg 59: star emoji in spades slot
+@pytest.mark.parametrize("line,place,name,stars,knockouts", [
+    ("🥇 Ден — ⭐️ 500 | ⭐️ 7", 1, "Ден", 500, 7),          # msg 59: star emoji in knockouts slot
     ("🥇 Ула — ⭐️ 4470 | ⭐️ 12", 1, "Ула", 4470, 12),      # msg 82: same
     ("4. ОляЛя — 1 104 очка", 4, "ОляЛя", 1104, 0),         # msg 91: no star, trailing word
     ("🥈 StBard — ⭐️ 380|3 ♥️", 2, "StBard", 380, 3),       # msg 158: no spaces, heart emoji
@@ -126,11 +126,11 @@ def _post_with_variant_line(line, place):
     ("13. Пиханина — ⭐️ 350 |", 13, "Пиханина", 350, 0),    # msg 82: same
     ("7.Илья —  ⭐️ 594", 7, "Илья", 594, 0),                # msg 91: no space after number
 ])
-def test_real_world_format_variants(line, place, name, stars, spades):
+def test_real_world_format_variants(line, place, name, stars, knockouts):
     tr = parse_post(_post_with_variant_line(line, place))
     last = tr.lines[-1]
-    assert (last.place, last.raw_name, last.stars, last.spades) == (
-        place, name, stars, spades)
+    assert (last.place, last.raw_name, last.stars, last.knockouts) == (
+        place, name, stars, knockouts)
 
 
 def test_backslashes_stripped_from_names():

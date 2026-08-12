@@ -21,7 +21,7 @@ def test_parse_page_extracts_posts():
 def test_parse_page_output_feeds_parser():
     posts = fetch.parse_page(FIXTURE)
     tr = parse_post(posts[0])
-    assert [(l.raw_name, l.stars, l.spades) for l in tr.lines] == [
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
         ("Демид", 100, 2), ("Vii", 50, 0)]
 
 

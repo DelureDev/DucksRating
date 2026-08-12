@@ -4,10 +4,10 @@ from src.models import HistoryRow
 from src.leaderboard import overall, monthly
 
 
-def row(player, stars, spades=0, month=8, day=1, msg_id=1):
+def row(player, stars, knockouts=0, month=8, day=1, msg_id=1):
     return HistoryRow(msg_id=msg_id, date=datetime.date(2026, month, day),
                       tournament="T", place=1, raw_name=player,
-                      player=player, stars=stars, spades=spades)
+                      player=player, stars=stars, knockouts=knockouts)
 
 
 def test_overall_totals_and_order():
@@ -15,7 +15,7 @@ def test_overall_totals_and_order():
     board = overall(rows)
     assert [b["player"] for b in board] == ["B", "A"]
     a = board[1]
-    assert (a["stars"], a["spades"], a["tournaments"]) == (150, 5, 2)
+    assert (a["stars"], a["knockouts"], a["tournaments"]) == (150, 5, 2)
 
 
 def test_overall_tie_ranks_skip():
