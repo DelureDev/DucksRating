@@ -93,14 +93,19 @@ def parse_post(post: RawPost) -> TournamentResult:
     if not lines:
         raise PostParseError(post.msg_id, "no result lines found")
 
+    # The admin sometimes skips a number when renumbering (msg 374: 13 → 15),
+    # so gaps are tolerated; order, uniqueness, and starting at 1 are not.
+    places = [l.place for l in lines]
+    if places[0] != 1 or any(a >= b for a, b in zip(places, places[1:])):
+        raise PostParseError(post.msg_id, f"places not increasing from 1: {places}")
+
+    # With gaps the declared ТОП-N matches the last place, not the line count;
+    # a post cut short at the bottom matches neither and still quarantines.
     top_n = _TOP_N_RE.search(post.text)
-    if top_n and int(top_n.group(1)) != len(lines):
+    if top_n and int(top_n.group(1)) not in (len(lines), places[-1]):
         raise PostParseError(
             post.msg_id,
-            f"header says ТОП-{top_n.group(1)} but {len(lines)} lines parsed")
-
-    places = [l.place for l in lines]
-    if places != list(range(1, len(lines) + 1)):
-        raise PostParseError(post.msg_id, f"places not sequential: {places}")
+            f"header says ТОП-{top_n.group(1)} but {len(lines)} lines parsed"
+            f" ending at place {places[-1]}")
 
     return TournamentResult(post.msg_id, post.date, tournament, tuple(lines))

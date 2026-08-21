@@ -53,15 +53,42 @@ def test_broken_result_line_rejects_whole_post():
     assert "8. Delureking" in ei.value.reason
 
 
-def test_top_n_count_mismatch_rejects():
-    text = SPY_007.replace("5. Vii — ⭐️ 248\n", "")  # says ТОП-11, has 10 lines
+def test_skipped_place_number_accepted():
+    # real msg 374: header says ТОП-23 but the admin's numbering jumps 13 → 15;
+    # the skipped number is the channel's problem, the post still counts
+    text = ("ИТОГИ BIG FREE-ROLL BOUNTY\n"
+            "ТОП-4 игроков вечера\n"
+            "🥇 Rena — ⭐️ 3170 | 11 ♠️\n"
+            "2. Sanatolievich — ⭐️ 690\n"
+            "4. Kradushiy_")
+    tr = parse_post(make_post(text))
+    assert [(l.place, l.raw_name) for l in tr.lines] == [
+        (1, "Rena"), (2, "Sanatolievich"), (4, "Kradushiy_")]
+
+
+def test_top_n_truncated_post_rejects():
+    # says ТОП-11 but the post ends at place 9: neither the line count nor the
+    # last place explains the header, so the post is cut short
+    text = SPY_007.split("10. Chivas")[0]
     with pytest.raises(PostParseError) as ei:
         parse_post(make_post(text))
     assert "11" in ei.value.reason
 
 
-def test_non_sequential_places_reject():
-    text = ("ИТОГИ X\n🥇 A — ⭐️ 10\n🥉 B — ⭐️ 5")  # place 2 missing, no ТОП-N line
+def test_out_of_order_places_reject():
+    text = "ИТОГИ X\n🥇 A — ⭐️ 10\n3. B — ⭐️ 5\n2. C — ⭐️ 1"
+    with pytest.raises(PostParseError):
+        parse_post(make_post(text))
+
+
+def test_duplicate_places_reject():
+    text = "ИТОГИ X\n🥇 A — ⭐️ 10\n2. B — ⭐️ 5\n2. C — ⭐️ 1"
+    with pytest.raises(PostParseError):
+        parse_post(make_post(text))
+
+
+def test_places_not_starting_at_one_reject():
+    text = "ИТОГИ X\n2. B — ⭐️ 5\n3. C — ⭐️ 1"  # top of the list missing
     with pytest.raises(PostParseError):
         parse_post(make_post(text))
 
