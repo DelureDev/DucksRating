@@ -8,11 +8,12 @@ _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 # Full result line: place marker, name, dash, stars, optional "| N ♠".
 # Tolerances learned from real posts: the ⭐ before the number may be absent
 # ("11. m0nakhov —  200"), a trailing word may follow it ("1 104 очка"), the
-# space after a medal may be missing ("🥈Alamroom"), and the knockout segment
-# may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️").
+# space after a medal may be missing ("🥈Alamroom"), the knockout segment
+# may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️"), and the dash
+# itself may be missing when the ⭐ marks the boundary ("🥇Mr.ВB ⭐️635").
 _LINE_RE = re.compile(
     r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)](?!\d)\s*)"
-    r"(?P<name>.+?)(?:\s+[—–-]|[—–])\s*"
+    r"(?P<name>.+?)(?:\s+[—–-]|[—–]|\s+(?=⭐))\s*"
     r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
     r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<knockouts>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
 )

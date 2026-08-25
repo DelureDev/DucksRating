@@ -152,6 +152,8 @@ def _post_with_variant_line(line, place):
     ("5. Вованчик — ⭐️ 120 |", 5, "Вованчик", 120, 0),      # msg 59: dangling pipe
     ("13. Пиханина — ⭐️ 350 |", 13, "Пиханина", 350, 0),    # msg 82: same
     ("7.Илья —  ⭐️ 594", 7, "Илья", 594, 0),                # msg 91: no space after number
+    ("🥇Mr.ВB ⭐️635 | ♠️10", 1, "Mr.ВB", 635, 10),          # msg 394: no dash before stars
+    ("🥈StepanovStepan ⭐️1390|♠️26", 2, "StepanovStepan", 1390, 26),  # msg 394: same, no spaces
 ])
 def test_real_world_format_variants(line, place, name, stars, knockouts):
     tr = parse_post(_post_with_variant_line(line, place))
@@ -164,6 +166,14 @@ def test_backslashes_stripped_from_names():
     text = "ИТОГИ X\n🥇 Kradushiy\\_ — ⭐️ 10\n2. A\\_Cheptsov"
     tr = parse_post(make_post(text))
     assert [l.raw_name for l in tr.lines] == ["Kradushiy_", "A_Cheptsov"]
+
+
+def test_dash_beats_starless_boundary_when_both_present():
+    # with both a star-number and a later dash-number on one line, the dash
+    # stays the separator: the star-number segment belongs to the name
+    text = "ИТОГИ X\n🥇 Name ⭐️100 — 200"
+    tr = parse_post(make_post(text))
+    assert (tr.lines[0].raw_name, tr.lines[0].stars) == ("Name ⭐️100", 200)
 
 
 def test_hyphen_digit_name_is_bare_participant():
