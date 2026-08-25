@@ -50,6 +50,22 @@ def test_monthly_to_values_sections():
     assert values[3] == []
 
 
+def test_history_roundtrip_with_transfer_columns():
+    r = HistoryRow(msg_id=101, date=datetime.date(2026, 8, 10),
+                   tournament="CUP", place=2, raw_name="Nasty",
+                   player="Nasty", stars=228, knockouts=0,
+                   transferred_to="Кes", transfer_player="Kes")
+    values = history_to_values([r])
+    assert values[1][8:] == ["Кes", "Kes"]
+    assert values_to_history(values) == [r]
+
+
+def test_values_to_history_pads_old_8col_rows():
+    values = [["101", "2026-08-10", "CUP", "1", "A", "A", "100", "2"]]
+    r = values_to_history(values)[0]
+    assert (r.transferred_to, r.transfer_player) == ("", "")
+
+
 def test_values_to_history_short_row_raises_with_row_context():
     values = [HISTORY_HEADER, ["101", "2026-08-10", "CUP"]]
     with pytest.raises(ValueError) as ei:

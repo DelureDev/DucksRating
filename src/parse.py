@@ -29,6 +29,14 @@ _MARKER_RE = re.compile(
 # participant.
 _DASH_DIGIT_RE = re.compile(r"(?:[—–]|\s-)\s*\d")
 _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
+# Brothers-tournament stack transfer, in both real notations: parenthesized
+# between name and points ("Mr. BB (передал стек Sailor Moon ) — ⭐️ 432") or
+# replacing the points segment after the dash ("Calimocho — передал стек
+# DelurKing"). «передала» is the feminine form.
+_TRANSFER_RE = re.compile(
+    r"\s*\(\s*передал\w*\s+стек\s+(?P<paren>[^()]+?)\s*\)"
+    r"|(?:\s+[—–-]|[—–])\s*передал\w*\s+стек\s+(?P<tail>.+?)\s*$",
+    re.IGNORECASE)
 
 
 class PostParseError(Exception):
@@ -69,6 +77,11 @@ def parse_post(post: RawPost) -> TournamentResult:
     for i, line in enumerate(post.text.splitlines()):
         if i == header_idx or not line.strip():
             continue
+        transfer = ""
+        tm = _TRANSFER_RE.search(line)
+        if tm:
+            transfer = (tm["paren"] or tm["tail"]).strip().replace("\\", "")
+            line = line[:tm.start()] + line[tm.end():]
         m = _LINE_RE.match(line)
         if m:
             place = _MEDALS[m["medal"]] if m["medal"] else int(m["num"])
@@ -77,6 +90,7 @@ def parse_post(post: RawPost) -> TournamentResult:
                 raw_name=m["name"].strip().replace("\\", ""),
                 stars=_digits(m["stars"]),
                 knockouts=int(m["knockouts"]) if m["knockouts"] else 0,
+                transferred_to=transfer,
             ))
             continue
         marker = _MARKER_RE.match(line)
@@ -89,7 +103,8 @@ def parse_post(post: RawPost) -> TournamentResult:
         if not name:
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
         place = _MEDALS[marker["medal"]] if marker["medal"] else int(marker["num"])
-        lines.append(ResultLine(place=place, raw_name=name, stars=0, knockouts=0))
+        lines.append(ResultLine(place=place, raw_name=name, stars=0, knockouts=0,
+                                transferred_to=transfer))
 
     if not lines:
         raise PostParseError(post.msg_id, "no result lines found")

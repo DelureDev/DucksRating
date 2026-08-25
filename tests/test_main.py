@@ -116,6 +116,45 @@ def test_automerged_notes_deduped_across_runs():
     assert len(sheet.automerged) == 1
 
 
+BROTHERS = ("ИТОГИ GOOD BROTHERS TIMES\n"
+            "🥇 Kes — ⭐️ 1140\n"
+            "2. Nasty (передал стек Kes) — ⭐️ 228\n"
+            "3. Хи-хи — передала стек Nasty")
+
+
+def test_run_resolves_transfers_and_credits_receiver_stars():
+    sheet = FakeSheet()
+    run(sheet, make_fetcher([RawPost(20, DATE, BROTHERS)]))
+    by_raw = {r.raw_name: r for r in sheet.history}
+    assert by_raw["Nasty"].transfer_player == "Kes"
+    assert by_raw["Хи-хи"].transfer_player == "Nasty"
+    board = {b["player"]: b["stars"] for b in sheet.overall}
+    assert board["Nasty"] == 1140
+    assert board["Хи-хи"] == 1140          # chain follows to the final holder
+
+
+def test_run_resolves_transfer_target_via_alias():
+    post = RawPost(21, DATE, ("ИТОГИ GOOD BROTHERS TIMES\n"
+                              "🥇 T.VI — ⭐️ 500\n"
+                              "2. Gavr — передал стек T. VI"))
+    sheet = FakeSheet(aliases={"T. VI": "T.VI", "T.VI": "T.VI"})
+    run(sheet, make_fetcher([post]))
+    by_raw = {r.raw_name: r for r in sheet.history}
+    assert by_raw["Gavr"].transfer_player == "T.VI"
+    board = {b["player"]: b["stars"] for b in sheet.overall}
+    assert board["Gavr"] == 500
+
+
+def test_run_flags_missing_transfer_target():
+    post = RawPost(22, DATE, ("ИТОГИ GOOD BROTHERS TIMES\n"
+                              "🥇 A — ⭐️ 100\n"
+                              "2. B — передал стек Ghost"))
+    sheet = FakeSheet()
+    run(sheet, make_fetcher([post]))
+    assert any(t == "transfer_target" and "Ghost" in d
+               for t, d in sheet.review_rows)
+
+
 def test_full_fetch_walks_everything_but_respects_known(monkeypatch):
     from src import fetch, main
 

@@ -194,3 +194,45 @@ def test_malformed_dash_line_still_rejects():
     text = "ИТОГИ X\n🥇 A — ⭐️ 10\n2. Xx — 100 zz"
     with pytest.raises(PostParseError):
         parse_post(make_post(text))
+
+
+def test_transfer_in_parens_with_points():
+    # real msg 232: annotation sits between name and points, stray inner spaces
+    text = ("ИТОГИ GOOD BROTHERS TIMES\n"
+            "🥇 Sailor Moon — ⭐️ 756\n"
+            "2. Mr. BB (передал стек Sailor Moon ) — ⭐️ 432")
+    tr = parse_post(make_post(text))
+    assert tr.lines[0].transferred_to == ""
+    line = tr.lines[1]
+    assert (line.raw_name, line.stars, line.transferred_to) == (
+        "Mr. BB", 432, "Sailor Moon")
+
+
+def test_transfer_after_dash_without_points():
+    # real msg 356: annotation replaces the points segment entirely
+    text = ("ИТОГИ GOOD BROTHERS TIMES\n"
+            "🥇 DelurKing — ⭐️ 500\n"
+            "2. Calimocho — передал стек DelurKing")
+    tr = parse_post(make_post(text))
+    line = tr.lines[1]
+    assert (line.raw_name, line.stars, line.transferred_to) == (
+        "Calimocho", 0, "DelurKing")
+
+
+def test_transfer_feminine_in_parens_bare():
+    # real msg 275: «передала», no points at all
+    text = ("ИТОГИ GOOD BROTHERS TIMES\n"
+            "🥇 ambiv8lence — ⭐️ 304\n"
+            "2. Хи-хи (передала стек ambiv8lence)")
+    tr = parse_post(make_post(text))
+    line = tr.lines[1]
+    assert (line.raw_name, line.stars, line.transferred_to) == (
+        "Хи-хи", 0, "ambiv8lence")
+
+
+def test_transfer_target_backslashes_stripped():
+    text = ("ИТОГИ GOOD BROTHERS TIMES\n"
+            "🥇 T\\_Vi — ⭐️ 270\n"
+            "2. Gavr (передал стек T\\_Vi) — ⭐️ 100")
+    tr = parse_post(make_post(text))
+    assert tr.lines[1].transferred_to == "T_Vi"

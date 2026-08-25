@@ -15,6 +15,7 @@ class ResultLine:
     raw_name: str
     stars: int
     knockouts: int
+    transferred_to: str = ""  # raw name of who received this player's stack
 
 
 @dataclass(frozen=True)
@@ -35,3 +36,5 @@ class HistoryRow:
     player: str
     stars: int
     knockouts: int
+    transferred_to: str = ""   # raw, as written in the post
+    transfer_player: str = ""  # canonical, recomputed every run like `player`

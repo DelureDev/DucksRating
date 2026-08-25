@@ -39,7 +39,8 @@ def run(sheet, fetch_posts=None) -> dict:
             new_rows.append(HistoryRow(
                 msg_id=tr.msg_id, date=tr.date, tournament=tr.tournament,
                 place=line.place, raw_name=line.raw_name, player="",
-                stars=line.stars, knockouts=line.knockouts))
+                stars=line.stars, knockouts=line.knockouts,
+                transferred_to=line.transferred_to))
 
     existing = {(r.msg_id, r.raw_name) for r in history}
     seen = set(existing)
@@ -67,9 +68,25 @@ def run(sheet, fetch_posts=None) -> dict:
                            f"If yes, add a row to the Aliases tab."))
         canonical_rows.append(dataclasses.replace(r, player=res.canonical))
 
-    sheet.write_history(canonical_rows)
-    sheet.write_leaderboards(leaderboard.overall(canonical_rows),
-                             leaderboard.monthly(canonical_rows))
+    # Second pass, once every player is registered: resolve stack-transfer
+    # targets through the same matcher, so «T. VI» finds T.VI via aliases.
+    present = {(r.msg_id, r.player) for r in canonical_rows}
+    resolved_rows: list[HistoryRow] = []
+    for r in canonical_rows:
+        if not r.transferred_to:
+            resolved_rows.append(r)
+            continue
+        target = matcher.resolve(r.transferred_to).canonical
+        if (r.msg_id, target) not in present:
+            review.append(("transfer_target",
+                           f"msg {r.msg_id}: «{r.raw_name}» transferred stack "
+                           f"to «{r.transferred_to}» — no such player in that "
+                           f"tournament, own stars kept"))
+        resolved_rows.append(dataclasses.replace(r, transfer_player=target))
+
+    sheet.write_history(resolved_rows)
+    sheet.write_leaderboards(leaderboard.overall(resolved_rows),
+                             leaderboard.monthly(resolved_rows))
     fresh_review = []
     for item in review:
         if item not in seen_review and item not in fresh_review:
