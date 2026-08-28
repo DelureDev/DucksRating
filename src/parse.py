@@ -12,15 +12,31 @@ _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 # may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️"), and the dash
 # itself may be missing when the ⭐ marks the boundary ("🥇Mr.ВB ⭐️635").
 _LINE_RE = re.compile(
-    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*|(?P<num>\d{1,3})[.)](?!\d)\s*)"
+    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*"
+    r"|(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*)"
     r"(?P<name>.+?)(?:\s+[—–-]|[—–]|\s+(?=⭐))\s*"
     r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
     r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<knockouts>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
 _MARKER_RE = re.compile(
-    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])|(?P<num>\d{1,3})[.)](?!\d))"
+    r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])"
+    r"|(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d))"
 )
+# New dialect since msg 407 (2026-08-26): medals and ⭐ dropped. Top-3 lines
+# carry a ♠️ prefix ("♠️1. T.VI-4230"), points are glued to the name with a
+# plain hyphen ("All_in_a-1410") or separated by spaces only ("Kastiel  1090"),
+# and knockouts trail as "13 ♠️" instead of "| 13 ♠". U+208B is a subscript
+# minus the admin's keyboard produced once ("Kradushiy₋500"). These rules
+# apply only to posts with at least one ♠️-numbered line, so glued-hyphen
+# names in old posts ("Anna-2") keep parsing as names.
+_NEW_DIALECT_RE = re.compile(r"^\s*[♠♥♦♣]️?\s*\d{1,3}[.)](?!\d)")
+_NEW_LINE_RE = re.compile(
+    r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
+    r"(?P<name>.+?)(?:[-₋]|\s+)\s*(?P<stars>\d+)"
+    r"(?:\s+(?P<knockouts>\d+)\s*[♠♥♦♣]️?)?\s*$"
+)
+_GLUED_DIGIT_RE = re.compile(r"[-₋]\d")
 # A points-like dash followed (maybe after spaces) by a digit. Em/en dashes
 # always count; a plain hyphen only when preceded by whitespace, so glued
 # hyphens stay part of names ("Anna-2"). Well-formed dash-number lines parse
@@ -32,10 +48,11 @@ _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
 # Brothers-tournament stack transfer, in both real notations: parenthesized
 # between name and points ("Mr. BB (передал стек Sailor Moon ) — ⭐️ 432") or
 # replacing the points segment after the dash ("Calimocho — передал стек
-# DelurKing"). «передала» is the feminine form.
+# DelurKing"). «передала» is the feminine form, «передает» the present tense
+# (msg 407), hence the wide «переда\w*» stem.
 _TRANSFER_RE = re.compile(
-    r"\s*\(\s*передал\w*\s+стек\s+(?P<paren>[^()]+?)\s*\)"
-    r"|(?:\s+[—–-]|[—–])\s*передал\w*\s+стек\s+(?P<tail>.+?)\s*$",
+    r"\s*\(\s*переда\w*\s+стек\s+(?P<paren>[^()]+?)\s*\)"
+    r"|(?:\s+[—–-]|[—–])\s*переда\w*\s+стек\s+(?P<tail>.+?)\s*$",
     re.IGNORECASE)
 
 
@@ -73,6 +90,8 @@ def parse_post(post: RawPost) -> TournamentResult:
     # strip set includes U+FE0F (invisible emoji variation selector)
     tournament = header[idx + len(RESULTS_MARKER):].strip(" :!️⭐♠🔥—–-")
 
+    new_dialect = any(_NEW_DIALECT_RE.match(l) for l in post.text.splitlines())
+
     lines: list[ResultLine] = []
     for i, line in enumerate(post.text.splitlines()):
         if i == header_idx or not line.strip():
@@ -93,10 +112,22 @@ def parse_post(post: RawPost) -> TournamentResult:
                 transferred_to=transfer,
             ))
             continue
+        if new_dialect:
+            m = _NEW_LINE_RE.match(line)
+            if m:
+                lines.append(ResultLine(
+                    place=int(m["num"]),
+                    raw_name=m["name"].strip().replace("\\", ""),
+                    stars=int(m["stars"]),
+                    knockouts=int(m["knockouts"]) if m["knockouts"] else 0,
+                    transferred_to=transfer,
+                ))
+                continue
         marker = _MARKER_RE.match(line)
         if not marker:
             continue
-        if "⭐" in line or _DASH_DIGIT_RE.search(line):
+        if ("⭐" in line or _DASH_DIGIT_RE.search(line)
+                or (new_dialect and _GLUED_DIGIT_RE.search(line))):
             # malformed star line, or a points line whose star marker is missing
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
         name = line[marker.end():].strip().replace("\\", "")

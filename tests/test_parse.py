@@ -3,7 +3,7 @@ import pytest
 
 from src.models import RawPost
 from src.parse import is_results_post, parse_post, PostParseError
-from tests.sample_posts import SPY_007, ANNOUNCEMENT
+from tests.sample_posts import SPY_007, ANNOUNCEMENT, BROTHERS_407
 
 DATE = datetime.date(2026, 8, 10)
 
@@ -236,3 +236,112 @@ def test_transfer_target_backslashes_stripped():
             "2. Gavr (передал стек T\\_Vi) — ⭐️ 100")
     tr = parse_post(make_post(text))
     assert tr.lines[1].transferred_to == "T_Vi"
+
+
+# --- New dialect since msg 407 (2026-08-26): the admin dropped medals and
+# stars.  Top-3 lines carry a ♠️ prefix, points are glued to the name with a
+# plain hyphen or separated by spaces only, knockouts trail as "13 ♠️".
+
+
+def test_new_dialect_spade_prefix_and_glued_points():
+    text = ("ИТОГИ GOOD BROTHERS TIME\n"
+            "ТОП-4 игрока вечера\n"
+            "♠️1. T.VI-4230\n"
+            "♠️2. Dotadagestan-2820\n"
+            "♠️3. СтальИньЯнь-1974\n"
+            "4. All_in_a-1410")
+    tr = parse_post(make_post(text))
+    assert [(l.place, l.raw_name, l.stars) for l in tr.lines] == [
+        (1, "T.VI", 4230), (2, "Dotadagestan", 2820),
+        (3, "СтальИньЯнь", 1974), (4, "All_in_a", 1410)]
+
+
+def test_new_dialect_space_separated_points():
+    # real msg 413: no dash at all between name and points
+    text = ("ИТОГИ GIPER BOUNTY\n"
+            "ТОП-5 игрока вечера\n"
+            "♠️1. TG_User_170050624   3270\n"
+            "♠️2. All_in_a   2180\n"
+            "♠️3. Gavr   1526\n"
+            "4. Kastiel  1090\n"
+            "5. Kai Angel")
+    tr = parse_post(make_post(text))
+    assert [(l.place, l.raw_name, l.stars) for l in tr.lines] == [
+        (1, "TG_User_170050624", 3270), (2, "All_in_a", 2180),
+        (3, "Gavr", 1526), (4, "Kastiel", 1090), (5, "Kai Angel", 0)]
+
+
+def test_new_dialect_trailing_knockouts():
+    # real msg 423: knockouts as a bare "13 ♠️" tail, one subscript minus
+    text = ("ИТОГИ TH. FREE-ROLL BOUNTY TOURNAMENT\n"
+            "ТОП-6 игрока вечера\n"
+            "♠️1. Хайзенберг-1930 13 ♠️\n"
+            "♠️2. Kinguruwa33-620 2 ♠️\n"
+            "♠️3. Dotadagestan-1294 10 ♠️\n"
+            "4. Андрей-410 2 ♠️\n"
+            "5. Gavr-126\n"
+            "6. Kradushiy₋500 5 ♠️")
+    tr = parse_post(make_post(text))
+    assert [(l.place, l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        (1, "Хайзенберг", 1930, 13), (2, "Kinguruwa33", 620, 2),
+        (3, "Dotadagestan", 1294, 10), (4, "Андрей", 410, 2),
+        (5, "Gavr", 126, 0), (6, "Kradushiy", 500, 5)]
+
+
+def test_new_dialect_bare_names_with_digits_stay_bare():
+    # digits glued straight to the name (no hyphen, no space) are not points
+    text = ("ИТОГИ X\n"
+            "♠️1. T.VI-4230\n"
+            "2. Biba_Egik\n"
+            "3. gg3\n"
+            "4. Duck_0451")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars) for l in tr.lines] == [
+        ("T.VI", 4230), ("Biba_Egik", 0), ("gg3", 0), ("Duck_0451", 0)]
+
+
+def test_new_dialect_present_tense_transfer():
+    text = ("ИТОГИ GOOD BROTHERS TIME\n"
+            "♠️1. Dotadagestan-2820\n"
+            "2. Mvsnika-564 (передает стек Dotadagestan)")
+    tr = parse_post(make_post(text))
+    line = tr.lines[1]
+    assert (line.raw_name, line.stars, line.transferred_to) == (
+        "Mvsnika", 564, "Dotadagestan")
+
+
+def test_glued_digits_are_points_only_in_new_dialect():
+    # the same "Anna-2" that stays a bare name in old posts (see
+    # test_hyphen_digit_name_is_bare_participant) is points here
+    text = "ИТОГИ X\n♠️1. T.VI-4230\n2. Anna-2"
+    tr = parse_post(make_post(text))
+    assert (tr.lines[1].raw_name, tr.lines[1].stars) == ("Anna", 2)
+
+
+def test_new_dialect_malformed_glued_line_rejects():
+    text = "ИТОГИ X\n♠️1. T.VI-4230\n2. Xx-100 zz"
+    with pytest.raises(PostParseError) as ei:
+        parse_post(make_post(text))
+    assert "Xx-100 zz" in ei.value.reason
+
+
+def test_parse_brothers_407_full():
+    tr = parse_post(make_post(BROTHERS_407, msg_id=407))
+    assert tr.tournament == "GOOD BROTHERS TIME TOURNAMENT"
+    assert len(tr.lines) == 33
+    assert [l.place for l in tr.lines] == list(range(1, 34))
+    first = tr.lines[0]
+    assert (first.place, first.raw_name, first.stars) == (1, "T.VI", 4230)
+    mvsnika = tr.lines[7]
+    assert (mvsnika.raw_name, mvsnika.stars, mvsnika.transferred_to) == (
+        "Mvsnika", 564, "Dotadagestan")
+    ula = tr.lines[10]
+    assert (ula.raw_name, ula.stars, ula.transferred_to) == (
+        "Ула", 0, "all_in_a")
+    pereliv = tr.lines[14]
+    assert (pereliv.raw_name, pereliv.stars, pereliv.transferred_to) == (
+        "pereliv", 4230, "T_Vi")
+    ivan = tr.lines[29]
+    assert (ivan.raw_name, ivan.stars) == ("Иван Васильев", 0)
+    last = tr.lines[32]
+    assert (last.place, last.raw_name, last.stars) == (33, "Duck_1716", 0)
