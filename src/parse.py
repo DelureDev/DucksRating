@@ -9,13 +9,15 @@ _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 # Tolerances learned from real posts: the ⭐ before the number may be absent
 # ("11. m0nakhov —  200"), a trailing word may follow it ("1 104 очка"), the
 # space after a medal may be missing ("🥈Alamroom"), the knockout segment
-# may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️"), and the dash
-# itself may be missing when the ⭐ marks the boundary ("🥇Mr.ВB ⭐️635").
+# may use the wrong emoji or no spaces ("| ⭐️ 7", "380|3 ♥️"), the dash
+# itself may be missing when the ⭐ marks the boundary ("🥇Mr.ВB ⭐️635"),
+# and a decorative ⭐️ may trail the points on the guest's line
+# ("Alullla - 330 ⭐️", msg 434).
 _LINE_RE = re.compile(
     r"^\s*(?:(?P<medal>[\U0001F947-\U0001F949])\s*"
     r"|(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*)"
     r"(?P<name>.+?)(?:\s+[—–-]|[—–]|\s+(?=⭐))\s*"
-    r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*"
+    r"(?:⭐️?\s*)?(?P<stars>\d[\d\s.,]*?)\s*(?:очк\w*)?\s*(?:⭐️?\s*)?"
     r"(?:\|\s*(?:[⭐♠♥♦♣]?️?\s*(?P<knockouts>\d+)\s*[⭐♠♥♦♣]?️?)?)?\s*$"
 )
 # Looser marker: a line that CLAIMS to be a result line ("🥇 ..." / "8. ...")
@@ -27,14 +29,17 @@ _MARKER_RE = re.compile(
 # carry a ♠️ prefix ("♠️1. T.VI-4230"), points are glued to the name with a
 # plain hyphen ("All_in_a-1410") or separated by spaces only ("Kastiel  1090"),
 # and knockouts trail as "13 ♠️" instead of "| 13 ♠". U+208B is a subscript
-# minus the admin's keyboard produced once ("Kradushiy₋500"). These rules
-# apply only to posts with at least one ♠️-numbered line, so glued-hyphen
-# names in old posts ("Anna-2") keep parsing as names.
+# minus the admin's keyboard produced once ("Kradushiy₋500"). Since msg 428
+# the points themselves may carry a decorative suit, glued ("Ула 2950♠️") or
+# spaced ("Amourrrr_6 300 ♠️") — a suit with no count before it is ornament,
+# not knockouts. These rules apply only to posts with at least one
+# ♠️-numbered line, so glued-hyphen names in old posts ("Anna-2") keep
+# parsing as names.
 _NEW_DIALECT_RE = re.compile(r"^\s*[♠♥♦♣]️?\s*\d{1,3}[.)](?!\d)")
 _NEW_LINE_RE = re.compile(
     r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
     r"(?P<name>.+?)(?:[-₋]|\s+)\s*(?P<stars>\d+)"
-    r"(?:\s+(?P<knockouts>\d+)\s*[♠♥♦♣]️?)?\s*$"
+    r"(?:\s+(?P<knockouts>\d+))?\s*[♠♥♦♣]?️?\s*$"
 )
 _GLUED_DIGIT_RE = re.compile(r"[-₋]\d")
 # A points-like dash followed (maybe after spaces) by a digit. Em/en dashes
@@ -89,6 +94,15 @@ def parse_post(post: RawPost) -> TournamentResult:
     idx = header.upper().index(RESULTS_MARKER)
     # strip set includes U+FE0F (invisible emoji variation selector)
     tournament = header[idx + len(RESULTS_MARKER):].strip(" :!️⭐♠🔥—–-")
+    if not tournament:
+        # since msg 428 the header is a bare «ИТОГИ» and the tournament name
+        # sits on the next line; a «ТОП-…» or result line means there is none
+        for line in post.text.splitlines()[header_idx + 1:]:
+            if not line.strip():
+                continue
+            if not _MARKER_RE.match(line) and not _TOP_N_RE.search(line):
+                tournament = line.strip(" :!️⭐♠🔥—–-")
+            break
 
     new_dialect = any(_NEW_DIALECT_RE.match(l) for l in post.text.splitlines())
 
@@ -131,6 +145,10 @@ def parse_post(post: RawPost) -> TournamentResult:
             # malformed star line, or a points line whose star marker is missing
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
         name = line[marker.end():].strip().replace("\\", "")
+        if new_dialect:
+            # msg 428: the ornament suit glues to pointless names too
+            # ("missJuliya1679♠️")
+            name = name.rstrip("♠♥♦♣️ ")
         if not name:
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
         place = _MEDALS[marker["medal"]] if marker["medal"] else int(marker["num"])

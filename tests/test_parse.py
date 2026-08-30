@@ -3,7 +3,8 @@ import pytest
 
 from src.models import RawPost
 from src.parse import is_results_post, parse_post, PostParseError
-from tests.sample_posts import SPY_007, ANNOUNCEMENT, BROTHERS_407
+from tests.sample_posts import (SPY_007, ANNOUNCEMENT, BROTHERS_407,
+                                MYSTERY_428, GUEST_434)
 
 DATE = datetime.date(2026, 8, 10)
 
@@ -154,6 +155,7 @@ def _post_with_variant_line(line, place):
     ("7.Илья —  ⭐️ 594", 7, "Илья", 594, 0),                # msg 91: no space after number
     ("🥇Mr.ВB ⭐️635 | ♠️10", 1, "Mr.ВB", 635, 10),          # msg 394: no dash before stars
     ("🥈StepanovStepan ⭐️1390|♠️26", 2, "StepanovStepan", 1390, 26),  # msg 394: same, no spaces
+    ("7. Alullla - 330 ⭐️", 7, "Alullla", 330, 0),          # msg 434: guest ⭐️ after the points
 ])
 def test_real_world_format_variants(line, place, name, stars, knockouts):
     tr = parse_post(_post_with_variant_line(line, place))
@@ -323,6 +325,85 @@ def test_new_dialect_malformed_glued_line_rejects():
     with pytest.raises(PostParseError) as ei:
         parse_post(make_post(text))
     assert "Xx-100 zz" in ei.value.reason
+
+
+def test_new_dialect_suit_tail_after_points():
+    # real msg 428: the points carry a decorative ♠️, usually glued, sometimes
+    # after a space; it never means knockouts (no count follows it)
+    text = ("ИТОГИ MYSTERY DUCK\n"
+            "ТОП-5 игрока вечера\n"
+            "♠️1. Ула 2950♠️\n"
+            "♠️2. cold_iemens13 1700♠️\n"
+            "♠️3. amenappanema 1140♠️\n"
+            "4. Amourrrr_6 300 ♠️\n"
+            "5. dmitriy 1180")
+    tr = parse_post(make_post(text))
+    assert [(l.place, l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        (1, "Ула", 2950, 0), (2, "cold_iemens13", 1700, 0),
+        (3, "amenappanema", 1140, 0), (4, "Amourrrr_6", 300, 0),
+        (5, "dmitriy", 1180, 0)]
+
+
+def test_new_dialect_knockout_tail_still_wins_over_suit_tail():
+    # the msg 423 form "points knockouts ♠️" must keep parsing as knockouts
+    text = ("ИТОГИ X\n"
+            "♠️1. Хайзенберг-1930 13 ♠️\n"
+            "2. Ула 2950♠️")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("Хайзенберг", 1930, 13), ("Ула", 2950, 0)]
+
+
+def test_new_dialect_suit_glued_to_bare_name_stripped():
+    # real msg 428, place 21: a suit stuck to a name with no points at all
+    text = ("ИТОГИ X\n"
+            "♠️1. Ула 2950♠️\n"
+            "2. missJuliya1679♠️\n"
+            "3. robbie_robson")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars) for l in tr.lines] == [
+        ("Ула", 2950), ("missJuliya1679", 0), ("robbie_robson", 0)]
+
+
+def test_tournament_name_on_line_below_bare_header():
+    # since msg 428 the header is a bare «ИТОГИ» and the name sits underneath
+    text = ("🗣ИТОГИ \nMYSTERY DUCK EVENT\n\n"
+            "ТОП-1 игрока вечера\n\n♠️1. Ула 2950♠️")
+    tr = parse_post(make_post(text))
+    assert tr.tournament == "MYSTERY DUCK EVENT"
+
+
+def test_bare_header_without_name_line_keeps_empty_tournament():
+    text = "ИТОГИ\nТОП-1 игроков вечера\n🥇 A — ⭐️ 10"
+    tr = parse_post(make_post(text))
+    assert tr.tournament == ""
+
+
+def test_parse_mystery_428_full():
+    tr = parse_post(make_post(MYSTERY_428, msg_id=428))
+    assert tr.tournament == "MYSTERY DUCK EVENT"
+    assert len(tr.lines) == 32
+    assert [l.place for l in tr.lines] == list(range(1, 33))
+    assert all(l.knockouts == 0 for l in tr.lines)
+    assert (tr.lines[0].raw_name, tr.lines[0].stars) == ("Ула", 2950)
+    assert (tr.lines[4].raw_name, tr.lines[4].stars) == ("dmitriy", 1180)
+    assert (tr.lines[6].raw_name, tr.lines[6].stars) == ("Amourrrr_6", 300)
+    assert (tr.lines[9].raw_name, tr.lines[9].stars) == ("kinguruwa33", 2880)
+    assert (tr.lines[20].raw_name, tr.lines[20].stars) == ("missJuliya1679", 0)
+    assert (tr.lines[31].raw_name, tr.lines[31].stars) == ("Vrotan_Zasoev", 0)
+
+
+def test_parse_guest_434_full():
+    tr = parse_post(make_post(GUEST_434, msg_id=434))
+    assert tr.tournament == "X GUEST EVENT ⭐️AIUIIIA"
+    assert len(tr.lines) == 49
+    assert [l.place for l in tr.lines] == list(range(1, 50))
+    assert (tr.lines[0].raw_name, tr.lines[0].stars) == ("Vikki", 1980)
+    assert (tr.lines[6].raw_name, tr.lines[6].stars) == ("Alullla", 330)
+    assert (tr.lines[8].raw_name, tr.lines[8].stars) == ("Gavr", 198)
+    assert (tr.lines[9].raw_name, tr.lines[9].stars) == ("Kirill", 0)
+    assert (tr.lines[43].raw_name, tr.lines[43].stars) == ("Anna30₁0", 0)
+    assert (tr.lines[48].raw_name, tr.lines[48].stars) == ("Skripov_Ivan", 0)
 
 
 def test_parse_brothers_407_full():
