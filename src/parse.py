@@ -50,14 +50,17 @@ _GLUED_DIGIT_RE = re.compile(r"[-₋]\d")
 # participant.
 _DASH_DIGIT_RE = re.compile(r"(?:[—–]|\s-)\s*\d")
 _TOP_N_RE = re.compile(r"ТОП[-\s]?(\d+)", re.IGNORECASE)
-# Brothers-tournament stack transfer, in both real notations: parenthesized
-# between name and points ("Mr. BB (передал стек Sailor Moon ) — ⭐️ 432") or
+# Brothers-tournament stack transfer, in all real notations: parenthesized
+# between name and points ("Mr. BB (передал стек Sailor Moon ) — ⭐️ 432"),
 # replacing the points segment after the dash ("Calimocho — передал стек
-# DelurKing"). «передала» is the feminine form, «передает» the present tense
-# (msg 407), hence the wide «переда\w*» stem.
+# DelurKing"), or — since msg 458 — an arrow at the receiver, after the
+# points ("Pereliv 1060 —> GeramiSwift") or the bare name ("Damir —>
+# Robbie_robson"). «передала» is the feminine form, «передает» the present
+# tense (msg 407), hence the wide «переда\w*» stem.
 _TRANSFER_RE = re.compile(
     r"\s*\(\s*переда\w*\s+стек\s+(?P<paren>[^()]+?)\s*\)"
-    r"|(?:\s+[—–-]|[—–])\s*переда\w*\s+стек\s+(?P<tail>.+?)\s*$",
+    r"|(?:\s+[—–-]|[—–])\s*переда\w*\s+стек\s+(?P<tail>.+?)\s*$"
+    r"|\s*[—–-]\s*>\s*(?P<arrow>.+?)\s*$",
     re.IGNORECASE)
 
 
@@ -113,7 +116,8 @@ def parse_post(post: RawPost) -> TournamentResult:
         transfer = ""
         tm = _TRANSFER_RE.search(line)
         if tm:
-            transfer = (tm["paren"] or tm["tail"]).strip().replace("\\", "")
+            transfer = (tm["paren"] or tm["tail"]
+                        or tm["arrow"]).strip().replace("\\", "")
             line = line[:tm.start()] + line[tm.end():]
         m = _LINE_RE.match(line)
         if m:
@@ -150,6 +154,11 @@ def parse_post(post: RawPost) -> TournamentResult:
             # ("missJuliya1679♠️")
             name = name.rstrip("♠♥♦♣️ ")
         if not name:
+            raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
+        if transfer and re.search(r"\s\d+$", name):
+            # a stripped arrow transfer left a trailing number behind: that is
+            # a points line no dialect branch managed to parse, not a bare
+            # participant — quarantine instead of storing «Pereliv 1060»
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
         place = _MEDALS[marker["medal"]] if marker["medal"] else int(marker["num"])
         lines.append(ResultLine(place=place, raw_name=name, stars=0, knockouts=0,

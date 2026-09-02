@@ -205,3 +205,45 @@ GIPER BOUNTY TOURNAMENT
 ✅канал DUCK'S
 ⬛️ЧАТ -болталка
 📸Inst DUCK'S"""
+
+# Real msg 458 (2026-09-02): stack transfers became an arrow pointing at
+# the receiver («Pereliv 1060 —> GeramiSwift»), with the receiver's points
+# sometimes copied onto the transferrer's line and sometimes absent
+# («Damir —> Robbie_robson»).
+BROTHERS_458 = """🗣ИТОГИ 
+GOOD BROTHERS TIME
+
+ТОП-19 игроков вечера 🔥
+
+♠️1. KimDmitriy 1590
+♠️2. GeramiSwift 1060
+♠️3. Glizzy 742
+4. Albertkoli 530
+5. Robbie_robson 424
+6. VrotanZasoev 318
+7. Asmirchik 265
+8. No1Z111 212
+9. Pereliv 1060 —> GeramiSwift
+10. Eee3888
+11. Gavr 530 —> Albertkoli
+12. Duck3110
+13. Damir —> Robbie_robson
+14. Эл
+15. Famerunner
+16. Apple
+17. Banan
+18. Des
+19. Lepehavokf
+Накидаем огонечков нашим победителям! 🔥
+
+⬇️Следующий турнир — 
+ 🥥GIPER BOUNTY🥥 
+
+📆 СРЕДА В 19:15
+
+🔜СПЕШИ ЗАНЯТЬ МЕСТО 
+
+🦆ПРИЛОЖЕНИЕ: ЗАПИСЬ/РЕЙТИНГ
+✅канал DUCK'S
+⬛️ЧАТ -болталка
+📸Inst DUCK'Ss"""

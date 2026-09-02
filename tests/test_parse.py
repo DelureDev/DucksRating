@@ -4,7 +4,7 @@ import pytest
 from src.models import RawPost
 from src.parse import is_results_post, parse_post, PostParseError
 from tests.sample_posts import (SPY_007, ANNOUNCEMENT, BROTHERS_407,
-                                MYSTERY_428, GUEST_434)
+                                BROTHERS_458, MYSTERY_428, GUEST_434)
 
 DATE = datetime.date(2026, 8, 10)
 
@@ -312,6 +312,41 @@ def test_new_dialect_present_tense_transfer():
         "Mvsnika", 564, "Dotadagestan")
 
 
+def test_transfer_arrow_with_points():
+    # real msg 458: the transfer became an arrow at the receiver, with the
+    # receiver's points copied onto the transferrer's line
+    text = ("ИТОГИ GOOD BROTHERS TIME\n"
+            "♠️1. GeramiSwift 1060\n"
+            "2. Pereliv 1060 —> GeramiSwift")
+    tr = parse_post(make_post(text))
+    line = tr.lines[1]
+    assert (line.raw_name, line.stars, line.transferred_to) == (
+        "Pereliv", 1060, "GeramiSwift")
+
+
+def test_transfer_arrow_without_points():
+    # real msg 458: arrow transfer on a pointless line
+    text = ("ИТОГИ GOOD BROTHERS TIME\n"
+            "♠️1. Robbie_robson 424\n"
+            "2. Damir —> Robbie_robson")
+    tr = parse_post(make_post(text))
+    line = tr.lines[1]
+    assert (line.raw_name, line.stars, line.transferred_to) == (
+        "Damir", 0, "Robbie_robson")
+
+
+def test_transfer_arrow_with_points_outside_new_dialect_rejects():
+    # Codex-flagged: in a post with no ♠️-numbered line the spaces-only
+    # points can't parse, and «Pereliv 1060» must quarantine rather than
+    # pass silently as a bare 0-star name
+    text = ("ИТОГИ GOOD BROTHERS TIME\n"
+            "🥇 GeramiSwift — ⭐️ 1060\n"
+            "2. Pereliv 1060 —> GeramiSwift")
+    with pytest.raises(PostParseError) as ei:
+        parse_post(make_post(text))
+    assert "Pereliv 1060" in ei.value.reason
+
+
 def test_glued_digits_are_points_only_in_new_dialect():
     # the same "Anna-2" that stays a bare name in old posts (see
     # test_hyphen_digit_name_is_bare_participant) is points here
@@ -426,3 +461,25 @@ def test_parse_brothers_407_full():
     assert (ivan.raw_name, ivan.stars) == ("Иван Васильев", 0)
     last = tr.lines[32]
     assert (last.place, last.raw_name, last.stars) == (33, "Duck_1716", 0)
+
+
+def test_parse_brothers_458_full():
+    tr = parse_post(make_post(BROTHERS_458, msg_id=458))
+    assert tr.tournament == "GOOD BROTHERS TIME"
+    assert len(tr.lines) == 19
+    assert [l.place for l in tr.lines] == list(range(1, 20))
+    first = tr.lines[0]
+    assert (first.raw_name, first.stars) == ("KimDmitriy", 1590)
+    pereliv = tr.lines[8]
+    assert (pereliv.raw_name, pereliv.stars, pereliv.transferred_to) == (
+        "Pereliv", 1060, "GeramiSwift")
+    eee = tr.lines[9]
+    assert (eee.raw_name, eee.stars, eee.transferred_to) == ("Eee3888", 0, "")
+    gavr = tr.lines[10]
+    assert (gavr.raw_name, gavr.stars, gavr.transferred_to) == (
+        "Gavr", 530, "Albertkoli")
+    damir = tr.lines[12]
+    assert (damir.raw_name, damir.stars, damir.transferred_to) == (
+        "Damir", 0, "Robbie_robson")
+    last = tr.lines[18]
+    assert (last.place, last.raw_name, last.stars) == (19, "Lepehavokf", 0)
