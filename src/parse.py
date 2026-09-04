@@ -41,6 +41,26 @@ _NEW_LINE_RE = re.compile(
     r"(?P<name>.+?)(?:[-₋]|\s+)\s*(?P<stars>\d+)"
     r"(?:\s+(?P<knockouts>\d+))?\s*[♠♥♦♣]?️?\s*$"
 )
+# msg 469 (2026-09-04): knockouts grew a «ko» suffix, either after the points
+# («Kuzmin - 3150 3ko») or glued before them («ArchiOriginal 4ko-600»). The
+# admin's keyboard mixes alphabets freely: Cyrillic «2ко», half-and-half «3kо»
+# (Latin k, Cyrillic о), and a Cyrillic З standing for the digit 3
+# («Ула Зко-450») — hence the homoglyph classes and _ko_count.
+_KO = r"[kк][oо]"
+_NEW_LINE_KO_RE = re.compile(
+    r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
+    r"(?P<name>.+?)(?:[-₋]|\s+)\s*(?P<stars>\d+)\s+"
+    r"(?P<knockouts>[\dЗз]+)\s*" + _KO + r"\s*$"
+)
+_NEW_LINE_KO_FIRST_RE = re.compile(
+    r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
+    r"(?P<name>.+?)\s+(?P<knockouts>[\dЗз]+)\s*" + _KO +
+    r"\s*[-₋—–]\s*(?P<stars>\d+)\s*$"
+)
+
+
+def _ko_count(s: str) -> int:
+    return int(s.translate(str.maketrans("Зз", "33")))
 _GLUED_DIGIT_RE = re.compile(r"[-₋]\d")
 # A points-like dash followed (maybe after spaces) by a digit. Em/en dashes
 # always count; a plain hyphen only when preceded by whitespace, so glued
@@ -95,8 +115,9 @@ def parse_post(post: RawPost) -> TournamentResult:
         raise PostParseError(post.msg_id, "not a results post")
     header_idx, header = found
     idx = header.upper().index(RESULTS_MARKER)
-    # strip set includes U+FE0F (invisible emoji variation selector)
-    tournament = header[idx + len(RESULTS_MARKER):].strip(" :!️⭐♠🔥—–-")
+    # strip set includes U+FE0F (invisible emoji variation selector); «=» is
+    # the msg-469 fencing («=LAST CALL TOURNAMENT=»)
+    tournament = header[idx + len(RESULTS_MARKER):].strip(" :!️⭐♠🔥—–-=")
     if not tournament:
         # since msg 428 the header is a bare «ИТОГИ» and the tournament name
         # sits on the next line; a «ТОП-…» or result line means there is none
@@ -104,7 +125,7 @@ def parse_post(post: RawPost) -> TournamentResult:
             if not line.strip():
                 continue
             if not _MARKER_RE.match(line) and not _TOP_N_RE.search(line):
-                tournament = line.strip(" :!️⭐♠🔥—–-")
+                tournament = line.strip(" :!️⭐♠🔥—–-=")
             break
 
     new_dialect = any(_NEW_DIALECT_RE.match(l) for l in post.text.splitlines())
@@ -131,6 +152,19 @@ def parse_post(post: RawPost) -> TournamentResult:
             ))
             continue
         if new_dialect:
+            # the ko forms go first: _NEW_LINE_RE would otherwise swallow a
+            # leading ko block into the name («ArchiOriginal 4ko» + 600)
+            m = (_NEW_LINE_KO_FIRST_RE.match(line)
+                 or _NEW_LINE_KO_RE.match(line))
+            if m:
+                lines.append(ResultLine(
+                    place=int(m["num"]),
+                    raw_name=m["name"].strip().replace("\\", ""),
+                    stars=int(m["stars"]),
+                    knockouts=_ko_count(m["knockouts"]),
+                    transferred_to=transfer,
+                ))
+                continue
             m = _NEW_LINE_RE.match(line)
             if m:
                 lines.append(ResultLine(

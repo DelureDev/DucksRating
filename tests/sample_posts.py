@@ -247,3 +247,49 @@ GOOD BROTHERS TIME
 ✅канал DUCK'S
 ⬛️ЧАТ -болталка
 📸Inst DUCK'Ss"""
+
+# Real msg 469 (2026-09-04), the season-closing freeze tournament: knockouts
+# grew a «ko» suffix, after the points («Kuzmin - 3150 3ko») or glued before
+# them («ArchiOriginal 4ko-600»), with homoglyph spellings — Cyrillic «2ко»,
+# mixed «3kо» (Latin k, Cyrillic о), and a Cyrillic З as the digit 3
+# («Ула Зко-450»). The tournament name is fenced in equals signs.
+LAST_CALL_469 = """🗣ИТОГИ 
+=LAST CALL TOURNAMENT=
+
+ТОП-20 игрока вечера 🔥
+♠️1. Kuzmin - 3150 3ko
+♠️2. DelurKing - 4050 15ko
+♠️3. Смех - 1560 2ко
+4. GeramiSwift - 1800 6ko
+5. Thisissargis - 1170 3kо
+6. Rena - 840 2ko
+7. T.VI - 900 3ko
+8. All_in_na - 510 1ko
+9. Damir - 420 1ko
+10. ArchiOriginal 4ko-600
+11. Vikki 1ko-150
+12. Ула Зко-450
+13. StBard 5ko-750
+14. Amenappanema 1ko-150
+15. A_Cheptsov 2ko-300
+16. Gavr
+17. Vejlivui 1ko-150
+18. Deviliar
+19. Андрей
+20. StepanovStepan 1ko-150
+Накидаем огонечков нашим победителям! 🔥
+
+⬇️Следующий турнир — 
+     =MYSTERY DUCK=
+ ПЯТНИЦА В 19:15
+
+🆒ПЕРВЫЙ ТУРНИР ОСЕННЕГО СЕЗОНА КЛУБА, 
+
+📆 ПЯТНИЦА В 19:15
+
+🔜СПЕШИ ЗАНЯТЬ МЕСТО 
+
+🦆ПРИЛОЖЕНИЕ: ЗАПИСЬ/РЕЙТИНГ
+✅канал DUCK'S
+⬛️ЧАТ -болталка
+📸Inst DUCK'Ss"""

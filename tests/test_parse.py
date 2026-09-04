@@ -4,7 +4,8 @@ import pytest
 from src.models import RawPost
 from src.parse import is_results_post, parse_post, PostParseError
 from tests.sample_posts import (SPY_007, ANNOUNCEMENT, BROTHERS_407,
-                                BROTHERS_458, MYSTERY_428, GUEST_434)
+                                BROTHERS_458, LAST_CALL_469, MYSTERY_428,
+                                GUEST_434)
 
 DATE = datetime.date(2026, 8, 10)
 
@@ -335,6 +336,29 @@ def test_transfer_arrow_without_points():
         "Damir", 0, "Robbie_robson")
 
 
+def test_new_dialect_ko_suffix_after_points():
+    # real msg 469: knockouts as a «ko» tail — Latin, Cyrillic «ко», and the
+    # mixed «kо» (Latin k, Cyrillic о)
+    text = ("ИТОГИ X\n"
+            "♠️1. Kuzmin - 3150 3ko\n"
+            "♠️2. Смех - 1560 2ко\n"
+            "3. Thisissargis - 1170 3kо")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("Kuzmin", 3150, 3), ("Смех", 1560, 2), ("Thisissargis", 1170, 3)]
+
+
+def test_new_dialect_ko_block_before_points():
+    # real msg 469: the ko block may come first, glued to the points with a
+    # hyphen; «Зко» writes the count with a Cyrillic З standing for 3
+    text = ("ИТОГИ X\n"
+            "♠️1. ArchiOriginal 4ko-600\n"
+            "2. Ула Зко-450")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("ArchiOriginal", 600, 4), ("Ула", 450, 3)]
+
+
 def test_transfer_arrow_with_points_outside_new_dialect_rejects():
     # Codex-flagged: in a post with no ♠️-numbered line the spaces-only
     # points can't parse, and «Pereliv 1060» must quarantine rather than
@@ -483,3 +507,18 @@ def test_parse_brothers_458_full():
         "Damir", 0, "Robbie_robson")
     last = tr.lines[18]
     assert (last.place, last.raw_name, last.stars) == (19, "Lepehavokf", 0)
+
+
+def test_parse_last_call_469_full():
+    tr = parse_post(make_post(LAST_CALL_469, msg_id=469))
+    assert tr.tournament == "LAST CALL TOURNAMENT"
+    assert len(tr.lines) == 20
+    assert [l.place for l in tr.lines] == list(range(1, 21))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("Kuzmin", 3150, 3), ("DelurKing", 4050, 15), ("Смех", 1560, 2),
+        ("GeramiSwift", 1800, 6), ("Thisissargis", 1170, 3), ("Rena", 840, 2),
+        ("T.VI", 900, 3), ("All_in_na", 510, 1), ("Damir", 420, 1),
+        ("ArchiOriginal", 600, 4), ("Vikki", 150, 1), ("Ула", 450, 3),
+        ("StBard", 750, 5), ("Amenappanema", 150, 1), ("A_Cheptsov", 300, 2),
+        ("Gavr", 0, 0), ("Vejlivui", 150, 1), ("Deviliar", 0, 0),
+        ("Андрей", 0, 0), ("StepanovStepan", 150, 1)]
