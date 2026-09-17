@@ -14,6 +14,7 @@ REVIEW_HEADER = ["date added", "type", "details"]
 AUTOMERGED_HEADER = ["date added", "details"]
 ALIASES_HEADER = ["written as", "real player"]
 TAB_ROWS = {"History": HISTORY_HEADER, "Overall": BOARD_HEADER,
+            "Season 2": BOARD_HEADER,
             "Monthly": [], "Aliases": ALIASES_HEADER,
             "Needs review": REVIEW_HEADER,
             "Auto-merged": AUTOMERGED_HEADER}
@@ -110,8 +111,9 @@ class Sheet:
     def write_history(self, rows: list[HistoryRow]) -> None:
         self._write_all(self._ws("History"), history_to_values(rows))
 
-    def write_leaderboards(self, overall_board, months) -> None:
+    def write_leaderboards(self, overall_board, months, season_board) -> None:
         self._write_all(self._ws("Overall"), overall_to_values(overall_board))
+        self._write_all(self._ws("Season 2"), overall_to_values(season_board))
         values = monthly_to_values(months)
         if not values:
             values = [[""]]

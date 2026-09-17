@@ -1,8 +1,10 @@
+import dataclasses
 import re
 
 from .models import RawPost, ResultLine, TournamentResult
 
 RESULTS_MARKER = "ИТОГИ"
+RESULTS_SIGNOFF = "Накидаем"  # «Накидаем огонечков нашим победителям!»
 _MEDALS = {"\U0001F947": 1, "\U0001F948": 2, "\U0001F949": 3}
 
 # Full result line: place marker, name, dash, stars, optional "| N ♠".
@@ -38,25 +40,33 @@ _MARKER_RE = re.compile(
 _NEW_DIALECT_RE = re.compile(r"^\s*[♠♥♦♣]️?\s*\d{1,3}[.)](?!\d)")
 _NEW_LINE_RE = re.compile(
     r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
-    r"(?P<name>.+?)(?:[-₋]|\s+)\s*(?P<stars>\d+)"
+    r"(?P<name>.+?)(?:[-₋]|\s+)\s*\+?(?P<stars>\d+)"
     r"(?:\s+(?P<knockouts>\d+))?\s*[♠♥♦♣]?️?\s*$"
 )
 # msg 469 (2026-09-04): knockouts grew a «ko» suffix, either after the points
 # («Kuzmin - 3150 3ko») or glued before them («ArchiOriginal 4ko-600»). The
 # admin's keyboard mixes alphabets freely: Cyrillic «2ко», half-and-half «3kо»
 # (Latin k, Cyrillic о), and a Cyrillic З standing for the digit 3
-# («Ула Зко-450») — hence the homoglyph classes and _ko_count.
+# («Ула Зко-450») — hence the homoglyph classes and _ko_count. Since msg 480
+# a decorative tail may follow («8ko♠️», «30ko😊», «3ko 150♠️») and the
+# ko-first form may use a space instead of the dash.
 _KO = r"[kк][oо]"
+_ORNAMENT = r"[^\w\s]*"
 _NEW_LINE_KO_RE = re.compile(
     r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
-    r"(?P<name>.+?)(?:[-₋]|\s+)\s*(?P<stars>\d+)\s+"
-    r"(?P<knockouts>[\dЗз]+)\s*" + _KO + r"\s*$"
+    r"(?P<name>.+?)(?:[-₋]|\s+)\s*\+?(?P<stars>\d+)\s+"
+    r"(?P<knockouts>[\dЗз]+)\s*" + _KO + r"\s*" + _ORNAMENT + r"\s*$"
 )
 _NEW_LINE_KO_FIRST_RE = re.compile(
     r"^\s*(?:[♠♥♦♣]️?\s*)?(?P<num>\d{1,3})[.)](?!\d)\s*"
     r"(?P<name>.+?)\s+(?P<knockouts>[\dЗз]+)\s*" + _KO +
-    r"\s*[-₋—–]\s*(?P<stars>\d+)\s*$"
+    r"\s*(?:[-₋—–]|\s)\s*\+?(?P<stars>\d+)\s*" + _ORNAMENT + r"\s*$"
 )
+_KO_NAME_TAIL_RE = re.compile(
+    r"^(?P<name>.+?)\s+(?P<ko>[\dЗз]+)\s*" + _KO + r"$", re.IGNORECASE)
+# a ko token no branch consumed, left inside a name («Alice 3ko»)
+_KO_IN_NAME_RE = re.compile(r"(?:^|\s)[\dЗз]+\s*" + _KO + r"(?:\s|$)",
+                            re.IGNORECASE)
 
 
 def _ko_count(s: str) -> int:
@@ -109,7 +119,44 @@ def _digits(s: str) -> int:
     return int(re.sub(r"\D", "", s))
 
 
+def _number_unnumbered(text: str) -> tuple[str, bool]:
+    """msg 534 dropped the place numbers altogether («♠️BULDOZER 2310 27ко»,
+    then bare «Kama Pulya 320»). When no line carries a place marker, the N
+    non-empty lines right after «ТОП-N» are the placings in order: number
+    them so the regular dialect rules parse them. The block must end right
+    at the «Накидаем огонечков» sign-off, or the count is off — the text is
+    then left untouched and the post fails with «no result lines found».
+    The flag says whether numbering happened: such a post always reads with
+    the new-dialect rules, suit prefixes or not."""
+    lines = text.splitlines()
+    if any(_MARKER_RE.match(l) for l in lines):
+        return text, False
+    for i, line in enumerate(lines):
+        top_n = _TOP_N_RE.search(line)
+        if top_n:
+            break
+    else:
+        return text, False
+    n, out, j = int(top_n.group(1)), lines[:i + 1], i + 1
+    numbered = 0
+    while j < len(lines) and numbered < n:
+        if lines[j].strip():
+            numbered += 1
+            suit = re.match(r"\s*([♠♥♦♣]️?)?\s*", lines[j])
+            out.append(f"{suit.group(1) or ''}{numbered}. "
+                       f"{lines[j][suit.end():]}")
+        else:
+            out.append(lines[j])
+        j += 1
+    rest = [l for l in lines[j:] if l.strip()]
+    if numbered < n or not rest or not rest[0].strip().startswith(RESULTS_SIGNOFF):
+        return text, False
+    return "\n".join(out + lines[j:]), True
+
+
 def parse_post(post: RawPost) -> TournamentResult:
+    text, renumbered = _number_unnumbered(post.text)
+    post = RawPost(post.msg_id, post.date, text)
     found = _find_header(post.text)
     if found is None:
         raise PostParseError(post.msg_id, "not a results post")
@@ -128,7 +175,8 @@ def parse_post(post: RawPost) -> TournamentResult:
                 tournament = line.strip(" :!️⭐♠🔥—–-=")
             break
 
-    new_dialect = any(_NEW_DIALECT_RE.match(l) for l in post.text.splitlines())
+    new_dialect = renumbered or any(
+        _NEW_DIALECT_RE.match(l) for l in post.text.splitlines())
 
     lines: list[ResultLine] = []
     for i, line in enumerate(post.text.splitlines()):
@@ -200,6 +248,16 @@ def parse_post(post: RawPost) -> TournamentResult:
 
     if not lines:
         raise PostParseError(post.msg_id, "no result lines found")
+    for i, l in enumerate(lines):
+        # msg 374: «Gavr 6ko — ⭐️ 876» — the ko count sits between the name
+        # and the dash, where _LINE_RE reads it as part of the name
+        tail = _KO_NAME_TAIL_RE.match(l.raw_name)
+        if tail and not l.knockouts:
+            l = lines[i] = dataclasses.replace(
+                l, raw_name=tail["name"], knockouts=_ko_count(tail["ko"]))
+        if _KO_IN_NAME_RE.search(l.raw_name):
+            raise PostParseError(
+                post.msg_id, f"knockouts left inside a name: {l.raw_name!r}")
 
     # The admin sometimes skips a number when renumbering (msg 374: 13 → 15),
     # so gaps are tolerated; order, uniqueness, and starting at 1 are not.

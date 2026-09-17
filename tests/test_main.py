@@ -31,9 +31,10 @@ class FakeSheet:
     def write_history(self, rows):
         self.history = list(rows)
 
-    def write_leaderboards(self, overall_board, months):
+    def write_leaderboards(self, overall_board, months, season_board):
         self.overall = overall_board
         self.months = months
+        self.season = season_board
 
     def append_review(self, items):
         self.review_rows.extend(items)
@@ -169,3 +170,16 @@ def test_full_fetch_walks_everything_but_respects_known(monkeypatch):
     posts = main.full_fetch({11})
     assert calls == [set()]                      # walked the whole channel
     assert [p.msg_id for p in posts] == [10, 12]  # known post filtered out
+
+
+def test_season_board_counts_only_posts_from_season_start(monkeypatch):
+    import src.main
+    monkeypatch.setattr(src.main, "SEASON_2_FIRST_MSG", 12)
+    sheet = FakeSheet()
+    posts = [RawPost(11, DATE, SPY_007), RawPost(12, DATE, SPY_007)]
+    run(sheet, fetch_posts=make_fetcher(posts))
+    overall = {b["player"]: b["tournaments"] for b in sheet.overall}
+    season = {b["player"]: b["tournaments"] for b in sheet.season}
+    assert set(season) == set(overall)
+    assert all(v == 2 for v in overall.values())
+    assert all(v == 1 for v in season.values())

@@ -293,3 +293,12 @@ LAST_CALL_469 = """🗣ИТОГИ
 ✅канал DUCK'S
 ⬛️ЧАТ -болталка
 📸Inst DUCK'Ss"""
+
+# msg 480 (2026-09-06), verbatim up to the sign-off
+SPY_480 = '🗣ИТОГИ \n   =SPY 007 TOURNAMENT=\n\nТОП-28 игрока вечера 🔥\n♠️1. chudo11 1420 8ko♠️\n♠️2. StepanovStepan 680♠️\n♠️3. Ула 1976 30ko😊\n4. Apple 1090 15ko ♠️\n5. Смех 772 10ko♠️\n6. Катяр 204\n7. petrenkok_ 420 5ko♠️\n8. Ната Каримова 536 8ko♠️\n9. Viki 302 4ko♠️\n10. Damir\n11. Chivas 3ko 150♠️\n12. Partizan\n13. ratoziy 3ko 150♠️\n14. Des\n15. Banan\n16. Nemo 7ko 350♠️\n17. cozy_all\n18. Карина 10ko 500♠️\n19. Wenngew\n20. Tpkg0979\n21. Hijack 19ko 950♠️\n22. ferbarbara\n23. timerzyanov_tm\n24. Pavel_Terentoev 6ko 300♠️\n25. Anya_trif\n26. alpfineoff\n27. Asvgt8977\n28. 34133\nНакидаем огонечков нашим победителям! 🔥\n'
+
+# msg 534 (2026-09-14), verbatim up to the sign-off
+SPY_534 = '🗣ИТОГИ \n=SPY 007 TOURNAMENT= \n\nТОП-15 игрока вечера 🔥\n♠️BULDOZER 2310 27ко\n♠️DelureKing 1540 18ко \n♠️amenappanema 948 10ко\nKama Pulya 320 \nMr.BB 256\nGavr 192\nOSA 160\nDamid 128 3ко\nRobbie_robson\nVrotanZasoev 150 3ко\nA_new_legend\nNo1Z11\nStBard\nDuck1660\nVoron_alrksandr\nНакидаем огонечков нашим победителям! 🔥\n'
+
+# msg 546 (2026-09-16), verbatim up to the sign-off
+BROTHERS_546 = '🗣ИТОГИ \n=BROTHERS TIME= \n\nТОП-19 игроков вечера 🔥\n\n♠️1. Asmirchik 1590\n♠️2. SDar_ia 1060\n♠️3. 1zot 742\n4. Ushakovasss 530\n5. ArchiOriginal 424\n6. Glebmp 318\n7. Aksnot 265\n8. Mr.BB 212\n9. Albertkoli 159\n10. Gavr (передал стек Asmirchik) +1590♠️\n11. Vintik and Boltik\n12. Pereliv(передает стек ArchiOriginal)\n13. Lyulyok\n14. Ула (передает стек Ushakovasss)\n15. DelurKing\n16. GeramiSwift\n17. StepanovStepan (передал стек lyulyok)\n18. StBard\n19. Culture_045\nНакидаем огонечков нашим победителям! 🔥\n'

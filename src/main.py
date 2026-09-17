@@ -2,6 +2,7 @@ import dataclasses
 import sys
 
 from . import fetch, leaderboard, parse
+from .config import SEASON_2_FIRST_MSG
 from .models import HistoryRow
 from .names import NameMatcher
 
@@ -85,8 +86,9 @@ def run(sheet, fetch_posts=None) -> dict:
         resolved_rows.append(dataclasses.replace(r, transfer_player=target))
 
     sheet.write_history(resolved_rows)
-    sheet.write_leaderboards(leaderboard.overall(resolved_rows),
-                             leaderboard.monthly(resolved_rows))
+    sheet.write_leaderboards(
+        leaderboard.overall(resolved_rows), leaderboard.monthly(resolved_rows),
+        leaderboard.season(resolved_rows, SEASON_2_FIRST_MSG))
     fresh_review = []
     for item in review:
         if item not in seen_review and item not in fresh_review:

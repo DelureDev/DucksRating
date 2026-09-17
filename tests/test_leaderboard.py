@@ -1,7 +1,7 @@
 import datetime
 
 from src.models import HistoryRow
-from src.leaderboard import overall, monthly
+from src.leaderboard import overall, monthly, season
 
 
 def row(player, stars, knockouts=0, month=8, day=1, msg_id=1, transfer=""):
@@ -87,3 +87,11 @@ def test_monthly_applies_transfer_stars():
     months = monthly([row("Kes", 1140), row("Nasty", 0, transfer="Kes")])
     aug = stars_by_player(months[0][1])
     assert aug["Nasty"] == 1140
+
+
+def test_season_keeps_only_posts_from_first_msg():
+    rows = [row("A", 100, msg_id=469), row("A", 30, msg_id=474),
+            row("B", 50, msg_id=480)]
+    board = season(rows, first_msg=470)
+    assert stars_by_player(board) == {"B": 50, "A": 30}
+    assert [b["rank"] for b in board] == [1, 2]

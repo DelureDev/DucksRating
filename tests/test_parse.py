@@ -5,7 +5,7 @@ from src.models import RawPost
 from src.parse import is_results_post, parse_post, PostParseError
 from tests.sample_posts import (SPY_007, ANNOUNCEMENT, BROTHERS_407,
                                 BROTHERS_458, LAST_CALL_469, MYSTERY_428,
-                                GUEST_434)
+                                GUEST_434, SPY_480, SPY_534, BROTHERS_546)
 
 DATE = datetime.date(2026, 8, 10)
 
@@ -522,3 +522,94 @@ def test_parse_last_call_469_full():
         ("StBard", 750, 5), ("Amenappanema", 150, 1), ("A_Cheptsov", 300, 2),
         ("Gavr", 0, 0), ("Vejlivui", 150, 1), ("Deviliar", 0, 0),
         ("Андрей", 0, 0), ("StepanovStepan", 150, 1)]
+
+
+def test_parse_spy_480_ko_with_ornaments():
+    # «8ko♠️» / «30ko😊» trail an ornament; «3ko 150♠️» puts ko before points
+    # with a space instead of a dash
+    tr = parse_post(make_post(SPY_480, msg_id=480))
+    assert tr.tournament == "SPY 007 TOURNAMENT"
+    assert [l.place for l in tr.lines] == list(range(1, 29))
+    got = {l.place: (l.raw_name, l.stars, l.knockouts) for l in tr.lines}
+    assert got[1] == ("chudo11", 1420, 8)
+    assert got[2] == ("StepanovStepan", 680, 0)
+    assert got[3] == ("Ула", 1976, 30)
+    assert got[4] == ("Apple", 1090, 15)
+    assert got[5] == ("Смех", 772, 10)
+    assert got[6] == ("Катяр", 204, 0)
+    assert got[7] == ("petrenkok_", 420, 5)
+    assert got[8] == ("Ната Каримова", 536, 8)
+    assert got[9] == ("Viki", 302, 4)
+    assert got[10] == ("Damir", 0, 0)
+    assert got[11] == ("Chivas", 150, 3)
+    assert got[13] == ("ratoziy", 150, 3)
+    assert got[16] == ("Nemo", 350, 7)
+    assert got[18] == ("Карина", 500, 10)
+    assert got[21] == ("Hijack", 950, 19)
+    assert got[24] == ("Pavel_Terentoev", 300, 6)
+    assert got[28] == ("34133", 0, 0)
+
+
+def test_parse_spy_534_unnumbered():
+    # the admin dropped place numbers: order after «ТОП-15» is the placing
+    tr = parse_post(make_post(SPY_534, msg_id=534))
+    assert tr.tournament == "SPY 007 TOURNAMENT"
+    assert [(l.place, l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        (1, "BULDOZER", 2310, 27), (2, "DelureKing", 1540, 18),
+        (3, "amenappanema", 948, 10), (4, "Kama Pulya", 320, 0),
+        (5, "Mr.BB", 256, 0), (6, "Gavr", 192, 0), (7, "OSA", 160, 0),
+        (8, "Damid", 128, 3), (9, "Robbie_robson", 0, 0),
+        (10, "VrotanZasoev", 150, 3), (11, "A_new_legend", 0, 0),
+        (12, "No1Z11", 0, 0), (13, "StBard", 0, 0), (14, "Duck1660", 0, 0),
+        (15, "Voron_alrksandr", 0, 0)]
+
+
+def test_unnumbered_block_shorter_than_top_n_quarantines():
+    text = SPY_534.replace("Voron_alrksandr\n", "")
+    with pytest.raises(PostParseError):
+        parse_post(make_post(text, msg_id=534))
+
+
+def test_parse_brothers_546_plus_points_after_transfer():
+    tr = parse_post(make_post(BROTHERS_546, msg_id=546))
+    assert [l.place for l in tr.lines] == list(range(1, 20))
+    gavr = tr.lines[9]
+    assert (gavr.raw_name, gavr.stars, gavr.transferred_to) == (
+        "Gavr", 1590, "Asmirchik")
+    pereliv = tr.lines[11]
+    assert (pereliv.raw_name, pereliv.transferred_to) == (
+        "Pereliv", "ArchiOriginal")
+
+
+def test_unnumbered_block_without_suits_still_reads_points():
+    text = ("🗣ИТОГИ \n=CUP=\nТОП-2 игрока вечера 🔥\nAlice 300\nBob 100 2ко\n"
+            "Накидаем огонечков нашим победителям! 🔥\n")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("Alice", 300, 0), ("Bob", 100, 2)]
+
+
+def test_plus_points_in_ko_forms():
+    text = "ИТОГИ CUP\n♠️1. Alice +150 3ko\n♠️2. Bob 2ko +100\n"
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("Alice", 150, 3), ("Bob", 100, 2)]
+
+
+def test_spaced_dash_after_ko_parses():
+    tr = parse_post(make_post("ИТОГИ CUP\n♠️1. Alice 3ko - 150\n"))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("Alice", 150, 3)]
+
+
+def test_ko_token_left_in_name_quarantines():
+    # a ko count no rule can place would otherwise be silently dropped
+    with pytest.raises(PostParseError):
+        parse_post(make_post("ИТОГИ CUP\n♠️1. 3ko Alice 150\n"))
+
+
+def test_ko_count_between_name_and_dash_old_dialect():
+    # real msg 374 line: the 876 used to land on a player called «Gavr 6ko»
+    tr = parse_post(_post_with_variant_line("8. Gavr 6ko — ⭐️ 876", 8))
+    last = tr.lines[-1]
+    assert (last.raw_name, last.stars, last.knockouts) == ("Gavr", 876, 6)
