@@ -94,6 +94,16 @@ _TRANSFER_RE = re.compile(
     re.IGNORECASE)
 
 
+# msg 562 (2026-09-19): a pointless line whose parenthetical names the guest
+# behind the handle, with the guest ⭐️ of msg 434 glued to it
+# («33. Alullla (Алина Фадеева⭐️)»). No digits ride along, so the ⭐️ is
+# ornament rather than a points marker: drop it and leave the annotation with
+# the name, the way the handle annotations of msg 439 («Vtlmksmv
+# (helpmedoctorduck)») already read.
+_STAR_ANNOTATION_RE = re.compile(
+    r"\(\s*(?P<body>[^()\d]*?[^()\d\s])\s*⭐️?\s*\)")
+
+
 class PostParseError(Exception):
     def __init__(self, msg_id: int, reason: str):
         self.msg_id = msg_id
@@ -188,6 +198,7 @@ def parse_post(post: RawPost) -> TournamentResult:
             transfer = (tm["paren"] or tm["tail"]
                         or tm["arrow"]).strip().replace("\\", "")
             line = line[:tm.start()] + line[tm.end():]
+        line = _STAR_ANNOTATION_RE.sub(r"(\g<body>)", line)
         m = _LINE_RE.match(line)
         if m:
             place = _MEDALS[m["medal"]] if m["medal"] else int(m["num"])

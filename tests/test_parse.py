@@ -613,3 +613,24 @@ def test_ko_count_between_name_and_dash_old_dialect():
     tr = parse_post(_post_with_variant_line("8. Gavr 6ko — ⭐️ 876", 8))
     last = tr.lines[-1]
     assert (last.raw_name, last.stars, last.knockouts) == ("Gavr", 876, 6)
+
+
+def test_guest_star_inside_parenthetical_annotation():
+    # real msg 562, place 33: a pointless line whose parenthetical names the
+    # guest behind the handle, with the guest ⭐️ glued to it. No digits ride
+    # along, so the ⭐️ is ornament — the line must not quarantine the post.
+    text = ("ИТОГИ X\n"
+            "♠️1. Ула 2950♠️\n"
+            "2. Alullla (Алина Фадеева⭐️)\n"
+            "3. robbie_robson")
+    tr = parse_post(make_post(text))
+    assert [(l.raw_name, l.stars) for l in tr.lines] == [
+        ("Ула", 2950), ("Alullla (Алина Фадеева)", 0), ("robbie_robson", 0)]
+
+
+def test_star_annotation_carrying_digits_still_quarantines():
+    # ornament only when no number rides along: «(⭐️ 500)» is a points marker
+    # the parser cannot place, and must reject the post rather than store a
+    # 0-star participant
+    with pytest.raises(PostParseError):
+        parse_post(make_post("ИТОГИ X\n♠️1. Ула 2950♠️\n2. Alullla (⭐️ 500)"))
