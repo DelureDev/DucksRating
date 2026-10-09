@@ -248,6 +248,12 @@ def parse_post(post: RawPost) -> TournamentResult:
             name = name.rstrip("♠♥♦♣️ ")
         if not name:
             raise PostParseError(post.msg_id, f"unparseable result line: {line.strip()!r}")
+        if _KO_IN_NAME_RE.search(name):
+            # A ko-only tail has no explicit points field. It may be a typo
+            # joining points and knockouts (msg 674: «DelurKing 197013ko»),
+            # so do not turn it into a zero-star participant and a huge ko count.
+            raise PostParseError(
+                post.msg_id, f"knockouts without explicit points: {line.strip()!r}")
         if transfer and re.search(r"\s\d+$", name):
             # a stripped arrow transfer left a trailing number behind: that is
             # a points line no dialect branch managed to parse, not a bare

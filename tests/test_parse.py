@@ -615,6 +615,19 @@ def test_ko_count_between_name_and_dash_old_dialect():
     assert (last.raw_name, last.stars, last.knockouts) == ("Gavr", 876, 6)
 
 
+@pytest.mark.parametrize("tail", ["197013ko", "13ko", "13ко"])
+def test_ko_without_explicit_points_quarantines(tail):
+    # Msg 674 joined the points and ko count; the split is ambiguous.
+    with pytest.raises(PostParseError, match="knockouts without explicit points"):
+        parse_post(make_post(f"ИТОГИ CUP\n♠️1. DelurKing {tail}\n", msg_id=674))
+
+
+def test_corrected_sniper_points_and_knockouts():
+    tr = parse_post(make_post("ИТОГИ CUP\n♠️1. DelurKing 1970 13ko\n"))
+    assert [(l.raw_name, l.stars, l.knockouts) for l in tr.lines] == [
+        ("DelurKing", 1970, 13)]
+
+
 def test_guest_star_inside_parenthetical_annotation():
     # real msg 562, place 33: a pointless line whose parenthetical names the
     # guest behind the handle, with the guest ⭐️ glued to it. No digits ride
