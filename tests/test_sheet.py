@@ -4,7 +4,7 @@ import pytest
 
 from src.models import HistoryRow
 from src.sheet import (HISTORY_HEADER, history_to_values, values_to_history,
-                       overall_to_values, monthly_to_values)
+                       overall_to_values, monthly_to_values, Sheet)
 
 
 def row(msg_id, place=1, player="A"):
@@ -78,3 +78,34 @@ def test_values_to_history_bad_date_raises_with_row_context():
     with pytest.raises(ValueError) as ei:
         values_to_history(values)
     assert "row 1" in str(ei.value)
+
+
+def test_rewrite_removes_stale_players_from_month_headers_and_separators():
+    class Worksheet:
+        col_count = 5
+
+        def __init__(self):
+            self.cells = [[1, "Old player", 999, 99, 9] for _ in range(6)]
+
+        def resize(self, rows):
+            self.cells = self.cells[:rows]
+
+        def update(self, values, range_name):
+            assert range_name == "A1"
+            # The Sheets API updates supplied cells only; missing cells retain
+            # their old values, reproducing the live stale-row failure.
+            for i, row_values in enumerate(values):
+                for j, value in enumerate(row_values):
+                    self.cells[i][j] = value
+
+    ws = Worksheet()
+    values = monthly_to_values([("2026-10", [{
+        "rank": 1, "player": "New player", "stars": 1970,
+        "knockouts": 13, "tournaments": 1}])])
+    Sheet._write_all(None, ws, values)
+    assert ws.cells == [
+        ["2026-10", "", "", "", ""],
+        ["rank", "player", "stars ⭐️", "knockouts ♠️", "tournaments"],
+        [1, "New player", 1970, 13, 1],
+        ["", "", "", "", ""],
+    ]

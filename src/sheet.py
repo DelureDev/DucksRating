@@ -106,7 +106,11 @@ class Sheet:
         # resize (grow or truncate) then overwrite in place — never clear()
         # first, so a crash mid-write can't leave the sheet empty.
         ws.resize(rows=max(len(values), 1))
-        ws.update(values=values, range_name="A1")
+        # Sheets leaves omitted cells untouched: short month headings and
+        # empty separator rows must explicitly overwrite old player values.
+        width = max(ws.col_count, max((len(v) for v in values), default=1))
+        padded = [list(v) + [""] * (width - len(v)) for v in values]
+        ws.update(values=padded or [[""] * width], range_name="A1")
 
     def write_history(self, rows: list[HistoryRow]) -> None:
         self._write_all(self._ws("History"), history_to_values(rows))
