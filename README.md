@@ -1,6 +1,6 @@
 # DUCKS Poker Rating Bot
 
-This bot reads the results posts from the [DUCKS Poker Telegram channel](https://t.me/DUCKS_POKER), keeps a full history of every player's points, and publishes Overall and Monthly leaderboards in a Google Sheet — automatically, every day. See the [design spec](docs/superpowers/specs/2026-08-11-ducks-rating-bot-design.md) for how it works under the hood.
+This bot reads the results posts from the [DUCKS Poker Telegram channel](https://t.me/DUCKS_POKER), keeps a full history of every player's points, and publishes leaderboards in a Google Sheet when run manually. Scheduled updates were disabled on 2026-10-12. See the [design spec](docs/superpowers/specs/2026-08-11-ducks-rating-bot-design.md) for how it works under the hood.
 
 ## 1. Google setup (click-by-click)
 
@@ -26,7 +26,7 @@ You need a Google Cloud "service account" — a robot account that the bot uses 
 
 ## 2. GitHub setup
 
-The bot runs automatically on GitHub, once a day.
+The bot can be run manually on GitHub.
 
 1. Create a GitHub repository and push this code to it.
 2. In the repository, go to **Settings** → **Secrets and variables** → **Actions**.
@@ -37,7 +37,7 @@ The bot runs automatically on GitHub, once a day.
 
 ## 3. Local run (backfill)
 
-The first run has to read the whole channel history, so it's best to do it once on your own computer before turning on the daily automation.
+The first run has to read the whole channel history, so it's best to do the initial backfill once on your own computer.
 
 1. Install the required packages:
    ```
@@ -51,12 +51,12 @@ The first run has to read the whole channel history, so it's best to do it once 
    Replace `<id>` with your sheet ID.
 4. The first run walks the whole channel history, so it can take a few minutes. Let it finish.
 
-## 4. Daily operation
+## 4. Manual operation
 
-Once the GitHub secrets are set up, the bot keeps itself running.
+Once the GitHub secrets are set up, run the bot whenever you want to refresh the ratings.
 
 - Open the **Actions** tab in your GitHub repository. You'll see the **Update ratings** workflow there.
-- It runs automatically every day at 08:00 UTC.
+- Automatic daily updates and monthly full re-scans are disabled.
 - A green check mark means the Sheet was updated successfully.
 - A red ❌ means something went wrong — click into the run to see the log.
 - You can also update it manually any time: open the workflow and click **Run workflow**.
@@ -71,4 +71,4 @@ Sometimes the same player's name is typed slightly differently between posts. Us
 - This takes effect on the next run, and it fixes the player's history retroactively — you don't need to touch old rows.
 - The **Needs review** tab lists only things that need a human decision: posts the bot couldn't parse, and name pairs that look similar but weren't merged.
 - The **Auto-merged** tab is an audit log of merges the bot made on its own — nothing to do there unless a merge looks wrong (then add an Aliases row mapping that spelling to itself to split it back).
-- Once a month (and whenever you tick "Full re-scan" on a manual run) the bot re-reads the entire channel and picks up any posts that were skipped earlier — for example, ones it previously couldn't parse.
+- Tick "Full re-scan" on a manual run to re-read the entire channel and pick up posts that were skipped earlier — for example, ones it previously couldn't parse.

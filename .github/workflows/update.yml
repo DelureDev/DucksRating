@@ -1,9 +1,6 @@
 name: Update ratings
 
 on:
-  schedule:
-    - cron: "0 8 * * *"   # daily incremental update
-    - cron: "0 9 1 * *"   # monthly full re-scan (1st of month): heals quarantined/edited posts
   workflow_dispatch:
     inputs:
       full:
@@ -25,7 +22,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python -m pytest -q
-      - run: python -m src.main ${{ (github.event.schedule == '0 9 1 * *' || inputs.full) && '--full' || '' }}
+      - run: python -m src.main ${{ inputs.full && '--full' || '' }}
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
