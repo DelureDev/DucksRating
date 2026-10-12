@@ -4,7 +4,7 @@ import pytest
 
 from src.models import HistoryRow
 from src.sheet import (HISTORY_HEADER, history_to_values, values_to_history,
-                       overall_to_values, monthly_to_values, Sheet)
+                       overall_to_values, monthly_to_values, season_to_values, Sheet)
 
 
 def row(msg_id, place=1, player="A"):
@@ -38,6 +38,15 @@ def test_overall_to_values():
     values = overall_to_values(board)
     assert values == [["rank", "player", "stars ⭐️", "knockouts ♠️", "tournaments"],
                       [1, "B", 300, 1, 1]]
+
+
+def test_season_wins_are_third_column():
+    values = season_to_values([{
+        "rank": 2, "player": "A", "wins": 3, "stars": 500,
+        "knockouts": 7, "tournaments": 9}])
+    assert values == [
+        ["rank", "player", "wins (1st place)", "stars ⭐️", "knockouts ♠️", "tournaments"],
+        [2, "A", 3, 500, 7, 9]]
 
 
 def test_monthly_to_values_sections():

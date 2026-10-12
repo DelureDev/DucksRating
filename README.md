@@ -61,6 +61,7 @@ Once the GitHub secrets are set up, the bot keeps itself running.
 - A red ❌ means something went wrong — click into the run to see the log.
 - You can also update it manually any time: open the workflow and click **Run workflow**.
 - The **Overall** tab is the all-time rating; the **Season 2** tab counts only the autumn season (posts after the summer freeze, msg 469 on 03.09).
+- The third column in **Season 2**, **wins (1st place)**, counts tournaments where the player finished first during that season. Rankings still use stars, with knockouts as the sorting tie-breaker.
 
 ## 5. Fixing names
 

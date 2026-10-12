@@ -10,11 +10,13 @@ HISTORY_HEADER = ["msg_id", "date", "tournament", "place",
                   "raw_name", "player", "stars", "knockouts",
                   "transferred_to", "transfer_player"]
 BOARD_HEADER = ["rank", "player", "stars ⭐️", "knockouts ♠️", "tournaments"]
+SEASON_HEADER = ["rank", "player", "wins (1st place)", "stars ⭐️",
+                 "knockouts ♠️", "tournaments"]
 REVIEW_HEADER = ["date added", "type", "details"]
 AUTOMERGED_HEADER = ["date added", "details"]
 ALIASES_HEADER = ["written as", "real player"]
 TAB_ROWS = {"History": HISTORY_HEADER, "Overall": BOARD_HEADER,
-            "Season 2": BOARD_HEADER,
+            "Season 2": SEASON_HEADER,
             "Monthly": [], "Aliases": ALIASES_HEADER,
             "Needs review": REVIEW_HEADER,
             "Auto-merged": AUTOMERGED_HEADER}
@@ -60,6 +62,12 @@ def monthly_to_values(months: list[tuple[str, list[dict]]]) -> list[list]:
         values.extend(overall_to_values(board))
         values.append([])
     return values
+
+
+def season_to_values(board: list[dict]) -> list[list]:
+    return [SEASON_HEADER] + [
+        [b["rank"], b["player"], b["wins"], b["stars"],
+         b["knockouts"], b["tournaments"]] for b in board]
 
 
 def _credentials() -> dict:
@@ -117,7 +125,7 @@ class Sheet:
 
     def write_leaderboards(self, overall_board, months, season_board) -> None:
         self._write_all(self._ws("Overall"), overall_to_values(overall_board))
-        self._write_all(self._ws("Season 2"), overall_to_values(season_board))
+        self._write_all(self._ws("Season 2"), season_to_values(season_board))
         values = monthly_to_values(months)
         if not values:
             values = [[""]]

@@ -45,7 +45,13 @@ def overall(rows: list[HistoryRow]) -> list[dict]:
 
 
 def season(rows: list[HistoryRow], first_msg: int) -> list[dict]:
-    return _aggregate([r for r in rows if r.msg_id >= first_msg])
+    season_rows = [r for r in rows if r.msg_id >= first_msg]
+    wins: dict[str, set[int]] = defaultdict(set)
+    for r in season_rows:
+        if r.place == 1:
+            wins[r.player].add(r.msg_id)
+    return [{**b, "wins": len(wins[b["player"]])}
+            for b in _aggregate(season_rows)]
 
 
 def monthly(rows: list[HistoryRow]) -> list[tuple[str, list[dict]]]:

@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import replace
 
 from src.models import HistoryRow
 from src.leaderboard import overall, monthly, season
@@ -95,3 +96,14 @@ def test_season_keeps_only_posts_from_first_msg():
     board = season(rows, first_msg=470)
     assert stars_by_player(board) == {"B": 50, "A": 30}
     assert [b["rank"] for b in board] == [1, 2]
+
+
+def test_season_wins_count_first_places_once_after_season_boundary():
+    rows = [row("A", 100, msg_id=469),
+            row("A", 50, msg_id=470),
+            replace(row("A", 30, msg_id=471), place=2),
+            replace(row("A", 50, msg_id=470), raw_name="Alias of A"),
+            replace(row("B", 0, msg_id=470, transfer="A"), place=3)]
+    board = {b["player"]: b for b in season(rows, 470)}
+    assert board["A"]["wins"] == 1
+    assert board["B"]["wins"] == 0  # receiving equal stars is not a win
